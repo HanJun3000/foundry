@@ -41,6 +41,7 @@ class RF3Trainer(FabricTrainer):
         n_recycles_train: int | None = None,
         loss: DictConfig | dict | None = None,
         metrics: DictConfig | dict | MetricManager | None = None,
+        freeze_module_name_substrings: list[str] | None = None,
         seed=None,  # dumped
         **kwargs,
     ):
@@ -55,8 +56,14 @@ class RF3Trainer(FabricTrainer):
                 - DictConfig/dict with Hydra configs (instantiated internally)
                 - Pre-instantiated MetricManager
                 - None (no metrics)
+            freeze_module_name_substrings: Optional list of substrings; any model parameter whose name contains one of
+                them is frozen (``requires_grad = False``) in ``construct_model``. Used for staged fine-tuning, e.g.
+                ``["feature_initializer", "recycler"]`` freezes the trunk so only the diffusion module is trained.
+                Matching is substring-based and thus robust to the EMA ``model.`` name prefix. Defaults to None (train all).
         """
         super().__init__(**kwargs)
+
+        self.freeze_module_name_substrings = freeze_module_name_substrings
 
         # (Initialize recycle schedule upfront so all GPU's can sample the same number of recycles within a batch)
         self.n_recycles_train = n_recycles_train
@@ -107,6 +114,39 @@ class RF3Trainer(FabricTrainer):
                 model = EMA(model, **self.state["train_cfg"].model.ema)
 
         self.initialize_or_update_trainer_state({"model": model})
+
+        # ... optionally freeze sub-modules for staged fine-tuning (e.g., diffusion-only)
+        self._freeze_matching_parameters()
+
+    def _freeze_matching_parameters(self) -> None:
+        """Freeze parameters whose name contains any of ``freeze_module_name_substrings``.
+
+        Substring matching is robust to the EMA ``model.`` name prefix. Frozen parameters are safely
+        ignored by the optimizer (AdamW skips ``grad is None``) and excluded from DDP gradient reduction
+        (DDP only reduces parameters with ``requires_grad=True``), so no optimizer/DDP change is needed.
+        """
+        substrings = self.freeze_module_name_substrings
+        if not substrings:
+            return
+
+        model = self.state["model"]
+        n_frozen_tensors = n_frozen_params = n_trainable_params = 0
+        for name, param in model.named_parameters():
+            if any(s in name for s in substrings):
+                param.requires_grad = False
+                n_frozen_tensors += 1
+                n_frozen_params += param.numel()
+            elif param.requires_grad:
+                n_trainable_params += param.numel()
+
+        assert n_frozen_tensors > 0, (
+            f"freeze_module_name_substrings={substrings} matched no parameters; "
+            "check the substrings against the model's parameter names."
+        )
+        ranked_logger.info(
+            f"Froze {n_frozen_tensors} parameter tensors ({n_frozen_params:,} params) matching {substrings}; "
+            f"{n_trainable_params:,} params remain trainable."
+        )
 
     def _assemble_network_inputs(self, example: dict) -> dict:
         """Assemble and validate the network inputs."""
