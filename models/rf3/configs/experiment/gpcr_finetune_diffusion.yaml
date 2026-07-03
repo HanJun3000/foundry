@@ -1,0 +1,50 @@
+# @package _global_
+#
+# Stage A of GPCR fine-tuning: train ONLY the diffusion module.
+# Freeze the trunk (feature_initializer + recycler) and the auxiliary distogram head.
+# Start from the pretrained RF3 checkpoint.
+#
+# Run (on the HPC):
+#   export PROJECT_ROOT=/path/to/repo         # required by configs/paths
+#   export GPCR_DATA_DIR=/path/to/data/gpcr   # the preprocess_gpcr.py output root
+#   export RF3_CKPT=/path/to/rf3_foundry_01_24_latest.ckpt
+#   python src/rf3/train.py experiment=gpcr_finetune_diffusion
+
+name: gpcr-finetune-diffusion
+project: rf3-gpcr
+tags:
+  - gpcr
+  - diffusion-only
+
+defaults:
+  - override /datasets: gpcr
+  - override /model: rf3
+  - override /trainer: rf3
+
+# Start from the pretrained checkpoint. WeightLoadingConfig defaults to COPY with a
+# REINIT fallback and iterates the *model's* params, so extra checkpoint keys (e.g. a
+# confidence head present in the public ckpt but absent from the plain rf3 model) are
+# ignored, and any model param missing from the ckpt is reinitialized. reset_optimizer
+# starts fine-tuning with a fresh optimizer state.
+ckpt_config:
+  _target_: foundry.utils.weights.CheckpointConfig
+  path: ${oc.env:RF3_CKPT}
+  reset_optimizer: true
+  weight_loading_config:
+    _target_: foundry.utils.weights.WeightLoadingConfig
+
+# Stage A freeze: train only the diffusion module (see Step 9). Drop "distogram_head"
+# from this list if you want its auxiliary distogram loss to keep training that head.
+trainer:
+  freeze_module_name_substrings:
+    - feature_initializer
+    - recycler
+    - distogram_head
+
+datasets:
+  run_confidence_head: false     # confidence is trained separately in Stage B
+  crop_size: 256                 # keep the whole 7TM bundle + ligand pocket
+
+model:
+  lr_scheduler:
+    base_lr: 1.0e-4              # fine-tuning LR (pretraining base is 1.8e-3)

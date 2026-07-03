@@ -1,0 +1,96 @@
+# GPCR fine-tuning dataset (Step 8).
+# Single dataset, cluster-weighted sampling to counter GPCR redundancy.
+# Uses PandasDataset + create_base_loader (loads the annotated CIFs by `path`);
+# StructuralDatasetWrapper is deprecated. Mirrors the train/val pipeline params
+# from datasets/base.yaml, but points MSAs at the GPCR msas/ tree (Step 6).
+defaults:
+  - base
+  - _self_
+
+pipeline_target: rf3.data.pipelines.build_af3_transform_pipeline
+
+# Data root produced by preprocess_gpcr.py. Defaults to the in-repo project data dir;
+# override on the HPC (or wherever the large data lives) with:
+#   export GPCR_DATA_DIR=/path/to/data/gpcr
+gpcr_data_dir: ${oc.env:GPCR_DATA_DIR,${oc.env:PROJECT_ROOT}/projects/gpcr_finetune/data/gpcr}
+
+# GPCR MSAs (Step 6): a3m sharded by the 11-char sequence hash, directory_depth 2
+gpcr_protein_msa_dirs:
+  - dir: ${datasets.gpcr_data_dir}/msas
+    extension: .a3m
+    directory_depth: 2
+
+train:
+  gpcr:
+    probability: 1.0
+    dataset:
+      _target_: atomworks.ml.datasets.PandasDataset
+      name: gpcr
+      id_column: example_id
+      data: ${datasets.gpcr_data_dir}/gpcr_manifest_train.parquet
+      loader:
+        # Load by pdb_code under the (portable) data root, so the manifest's absolute
+        # `path` column is not used — set GPCR_DATA_DIR and the CIFs are found anywhere.
+        _target_: atomworks.ml.datasets.loaders.cif.create_base_loader
+        path_colname: pdb_code
+        base_path: ${datasets.gpcr_data_dir}/annotated_cif
+        extension: .cif
+      transform:
+        _target_: ${datasets.pipeline_target}
+        is_inference: False
+        protein_msa_dirs: ${datasets.gpcr_protein_msa_dirs}
+        rna_msa_dirs: []
+        n_recycles: ${datasets.n_recycles_train}
+        crop_size: ${datasets.crop_size}
+        n_msa: ${datasets.n_msa}
+        diffusion_batch_size: ${datasets.diffusion_batch_size_train}
+        max_atoms_in_crop: ${datasets.max_atoms_in_crop}
+        run_confidence_head: ${datasets.run_confidence_head}
+        p_unconditional: ${datasets.p_unconditional}
+        p_dropout_atom_level_embeddings: ${datasets.p_dropout_atom_level_embeddings}
+        take_first_chiral_subordering: ${datasets.take_first_chiral_subordering}
+        use_element_for_atom_names_of_atomized_tokens: ${datasets.use_element_for_atom_names_of_atomized_tokens}
+        mirror_prob: ${datasets.mirror_prob}
+        atomization_prob: ${datasets.atomization_prob}
+        ligand_dropout_prob: ${datasets.ligand_dropout_prob}
+        add_residue_is_paired_feature: ${datasets.add_residue_is_paired_feature}
+        add_cyclic_bonds: ${datasets.add_cyclic_bonds}
+        # spatial-biased cropping keeps the ligand pocket + 7TM bundle in the crop
+        crop_spatial_probability: 0.7
+        crop_contiguous_probability: 0.3
+    # counter redundancy: down-weight big receptor clusters (inverse cluster size)
+    weights:
+      _target_: atomworks.ml.samplers.calculate_weights_by_inverse_cluster_size
+      cluster_column: cluster
+
+val:
+  gpcr_val:
+    dataset:
+      _target_: atomworks.ml.datasets.PandasDataset
+      name: gpcr_val
+      id_column: example_id
+      data: ${datasets.gpcr_data_dir}/gpcr_manifest_val.parquet
+      loader:
+        # Load by pdb_code under the (portable) data root, so the manifest's absolute
+        # `path` column is not used — set GPCR_DATA_DIR and the CIFs are found anywhere.
+        _target_: atomworks.ml.datasets.loaders.cif.create_base_loader
+        path_colname: pdb_code
+        base_path: ${datasets.gpcr_data_dir}/annotated_cif
+        extension: .cif
+      transform:
+        _target_: ${datasets.pipeline_target}
+        is_inference: True
+        protein_msa_dirs: ${datasets.gpcr_protein_msa_dirs}
+        rna_msa_dirs: []
+        n_recycles: ${datasets.n_recycles_validation}
+        crop_size: null            # no cropping at validation
+        n_msa: ${datasets.n_msa}
+        diffusion_batch_size: ${datasets.diffusion_batch_size_inference}
+        max_atoms_in_crop: null
+        return_atom_array: True     # needed for validation metrics
+        run_confidence_head: ${datasets.run_confidence_head}
+        p_unconditional: 1.0
+        p_dropout_atom_level_embeddings: 0.0
+        take_first_chiral_subordering: ${datasets.take_first_chiral_subordering}
+        use_element_for_atom_names_of_atomized_tokens: ${datasets.use_element_for_atom_names_of_atomized_tokens}
+        add_residue_is_paired_feature: ${datasets.add_residue_is_paired_feature}

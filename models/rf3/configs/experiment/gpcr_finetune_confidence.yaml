@@ -1,0 +1,42 @@
+# @package _global_
+#
+# Stage B of GPCR fine-tuning: train ONLY the confidence heads on top of the
+# Stage-A diffusion module. RF3TrainerWithConfidence already freezes everything
+# except confidence_head and trains it via a mini-rollout, so no extra freeze
+# config is needed here. Start from the Stage-A checkpoint.
+#
+# Run (on the HPC):
+#   export PROJECT_ROOT=/path/to/repo
+#   export GPCR_DATA_DIR=/path/to/data/gpcr
+#   export RF3_STAGEA_CKPT=/path/to/stageA/checkpoint.ckpt
+#   python src/rf3/train.py experiment=gpcr_finetune_confidence
+
+name: gpcr-finetune-confidence
+project: rf3-gpcr
+tags:
+  - gpcr
+  - confidence-only
+
+defaults:
+  - override /datasets: gpcr
+  - override /model: rf3_with_confidence
+  - override /trainer: rf3_with_confidence
+
+# Load the Stage-A checkpoint. The model here is RF3WithConfidence (adds a fresh
+# confidence_head); the Stage-A ckpt has no confidence_head, so WeightLoadingConfig's
+# REINIT fallback initializes it fresh while COPYing the frozen trunk + trained
+# diffusion module.
+ckpt_config:
+  _target_: foundry.utils.weights.CheckpointConfig
+  path: ${oc.env:RF3_STAGEA_CKPT}
+  reset_optimizer: true
+  weight_loading_config:
+    _target_: foundry.utils.weights.WeightLoadingConfig
+
+datasets:
+  run_confidence_head: true      # emit confidence_feats the trainer needs
+  crop_size: 256
+
+model:
+  lr_scheduler:
+    base_lr: 1.0e-4

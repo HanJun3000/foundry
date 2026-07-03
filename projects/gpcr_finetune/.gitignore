@@ -1,0 +1,16 @@
+# Large, regenerable data — reproduce with preprocess_gpcr.py + the MSA script.
+# Only the small "pinning" artifacts below data/gpcr/ are committed
+# (manifests, meta/*.parquet, msa_input/queries.fasta, seq_index.tsv).
+data/gpcr/raw_cif/
+data/gpcr/annotated_cif/
+data/gpcr/msas/
+data/gpcr/msa_input/queries_split/
+data/gpcr/msa_input/cf_search_out/
+data/gpcr/meta/*.log
+data/gpcr/meta/*_failures.csv
+
+# MSA job scratch / logs
+projects/**/logs/
+*.lock
+cf_search_out/
+queries_split/
