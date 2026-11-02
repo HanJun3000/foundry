@@ -23,3 +23,9 @@ ground_truth_conformer_selection: null
 fallback_conformer_to_input_coords: true
 cyclic_chains: []
 add_missing_atoms: true
+# Structure scoring: evaluate the confidence head on the input coordinates instead of
+# on diffusion samples. See the RF3 README, "Scoring a given structure".
+score_structure: false
+# Refuse to score an input providing less than this fraction of the token
+# representative atoms (0.0 = never refuse, only warn). Scoring mode only.
+score_structure_min_rep_atom_coverage: 0.0

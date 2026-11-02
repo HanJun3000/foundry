@@ -22,6 +22,7 @@ from atomworks.io.transforms.categories import category_to_dict
 from atomworks.io.utils.selection import AtomSelectionStack
 from atomworks.ml.transforms.atom_array import add_global_token_id_annotation
 from biotite.structure import AtomArray
+from rf3.data.score_structure import ScoringSpec, record_input_presence
 from rf3.utils.io import (
     CIF_LIKE_EXTENSIONS,
     DICTIONARY_LIKE_EXTENSIONS,
@@ -68,6 +69,12 @@ class InferenceInput:
     template_selection: list[str] | str | None = None
     ground_truth_conformer_selection: list[str] | str | None = None
     cyclic_chains: list[str] | None = None
+    # Scoring mode (opt-in). `None` means "not specified for this example", which lets a
+    # run-level default fill it in; an explicit `ScoringSpec` always wins.
+    score_structure: ScoringSpec | None = None
+    # Where the input came from, when it came from a file. Reported in scoring mode so
+    # `<example_id>_scoring_info.json` records which structure was scored.
+    source_path: str | None = None
 
     @classmethod
     def from_cif_path(
@@ -77,6 +84,7 @@ class InferenceInput:
         template_selection: list[str] | str | None = None,
         ground_truth_conformer_selection: list[str] | str | None = None,
         add_missing_atoms: bool = True,
+        score_structure: ScoringSpec | None = None,
     ) -> "InferenceInput":
         """Load from CIF/PDB file.
 
@@ -88,6 +96,8 @@ class InferenceInput:
           add_missing_atoms: Whether to add missing atoms from the CCD to partially/fully
             unresolved residues. Defaults to True (atomworks parser default). Set to False
             to keep only the atoms present in the file.
+          score_structure: Scoring-mode configuration. When enabled, the confidence head
+            is evaluated on this file's coordinates instead of on diffusion samples.
 
         Returns:
           InferenceInput object.
@@ -140,6 +150,8 @@ class InferenceInput:
             example_id=example_id,
             template_selection=final_template_sel,
             ground_truth_conformer_selection=final_conformer_sel,
+            score_structure=score_structure,
+            source_path=str(path),
         )
 
     @classmethod
@@ -148,6 +160,7 @@ class InferenceInput:
         data: dict,
         template_selection: list[str] | str | None = None,
         ground_truth_conformer_selection: list[str] | str | None = None,
+        score_structure: ScoringSpec | None = None,
     ) -> "InferenceInput":
         """Create from JSON dict with components.
 
@@ -157,6 +170,8 @@ class InferenceInput:
           data: JSON dictionary with components.
           template_selection: Template selection override.
           ground_truth_conformer_selection: Conformer selection override.
+          score_structure: Run-level scoring default. A job-level ``score_structure``
+            key in ``data`` takes precedence over it.
 
         Returns:
           InferenceInput object.
@@ -212,12 +227,22 @@ class InferenceInput:
             data["name"],
         )
 
+        # A job-level `score_structure` (or `scoreStructure`) field wins over the
+        # run-level default, including when it explicitly switches scoring off.
+        job_score_value = data.get("score_structure", data.get("scoreStructure"))
+        final_score_structure = (
+            ScoringSpec.from_json_value(job_score_value, example_id=data["name"])
+            if job_score_value is not None
+            else score_structure
+        )
+
         return cls(
             atom_array=atom_array,
             chain_info=chain_info,
             example_id=data["name"],
             template_selection=final_template_sel,
             ground_truth_conformer_selection=final_conformer_sel,
+            score_structure=final_score_structure,
         )
 
     @classmethod
@@ -228,6 +253,7 @@ class InferenceInput:
         example_id: str | None = None,
         template_selection: list[str] | str | None = None,
         ground_truth_conformer_selection: list[str] | str | None = None,
+        score_structure: ScoringSpec | None = None,
     ) -> "InferenceInput":
         """Create from AtomArray.
 
@@ -237,6 +263,7 @@ class InferenceInput:
           example_id: Example ID. Defaults to generated ID.
           template_selection: Template selection.
           ground_truth_conformer_selection: Conformer selection.
+          score_structure: Scoring-mode configuration.
 
         Returns:
           InferenceInput object.
@@ -271,6 +298,7 @@ class InferenceInput:
             example_id=example_id or f"inference_{id(atom_array)}",
             template_selection=template_selection,
             ground_truth_conformer_selection=ground_truth_conformer_selection,
+            score_structure=score_structure,
         )
 
     def to_pipeline_input(self) -> dict:
@@ -286,6 +314,10 @@ class InferenceInput:
             atom_array,
             template_selection=self.template_selection,
             ground_truth_conformer_selection=self.ground_truth_conformer_selection,
+            # Only in scoring mode, so that the normal path's atom array is untouched
+            record_presence=bool(
+                self.score_structure is not None and self.score_structure.enabled
+            ),
         )
 
         if self.cyclic_chains:
@@ -305,6 +337,7 @@ def _process_single_path(
     template_selection: list[str] | str | None,
     ground_truth_conformer_selection: list[str] | str | None,
     add_missing_atoms: bool = True,
+    score_structure: ScoringSpec | None = None,
 ) -> list[InferenceInput]:
     """Worker function to process a single input file path.
 
@@ -317,6 +350,7 @@ def _process_single_path(
       template_selection: Override for template selection.
       ground_truth_conformer_selection: Override for conformer selection.
       add_missing_atoms: Whether to add missing atoms from the CCD. Defaults to True.
+      score_structure: Run-level scoring default, overridable per job in JSON inputs.
 
     Returns:
       List of InferenceInput objects (may be empty if file is skipped).
@@ -350,6 +384,7 @@ def _process_single_path(
                         item,
                         template_selection=template_selection,
                         ground_truth_conformer_selection=ground_truth_conformer_selection,
+                        score_structure=score_structure,
                     )
                 )
 
@@ -364,6 +399,7 @@ def _process_single_path(
                     template_selection=template_selection,
                     ground_truth_conformer_selection=ground_truth_conformer_selection,
                     add_missing_atoms=add_missing_atoms,
+                    score_structure=score_structure,
                 )
             )
     else:
@@ -382,6 +418,7 @@ def prepare_inference_inputs_from_paths(
     template_selection: list[str] | str | None = None,
     ground_truth_conformer_selection: list[str] | str | None = None,
     add_missing_atoms: bool = True,
+    score_structure: ScoringSpec | None = None,
 ) -> list[InferenceInput]:
     """Load InferenceInput objects from file paths.
 
@@ -395,6 +432,8 @@ def prepare_inference_inputs_from_paths(
       template_selection: Override for template selection (applied to all inputs).
       ground_truth_conformer_selection: Override for conformer selection (applied to all inputs).
       add_missing_atoms: Whether to add missing atoms from the CCD. Defaults to True.
+      score_structure: Run-level scoring default (applied to all inputs). JSON inputs may
+        override it per job.
 
     Returns:
       List of InferenceInput objects.
@@ -435,6 +474,7 @@ def prepare_inference_inputs_from_paths(
                 template_selection,
                 ground_truth_conformer_selection,
                 add_missing_atoms,
+                score_structure,
             )
             for path in paths_to_raw_input_files
         ]
@@ -581,18 +621,26 @@ def apply_conformer_and_template_selections(
     atom_array: AtomArray,
     template_selection: list[str] | str | None = None,
     ground_truth_conformer_selection: list[str] | str | None = None,
+    record_presence: bool = False,
 ) -> AtomArray:
     """Apply template and conformer selections and basic preprocessing.
 
     This function replaces the former class method `prepare_atom_array`.
 
     - Applies `apply_template_selection` then `apply_ground_truth_conformer_selection`.
+    - Optionally records which atoms came from the input file (scoring mode).
     - Replaces NaN coordinates with -1 for safety.
 
     Args:
         atom_array: AtomArray to prepare.
         template_selection: Template selection string(s). Single strings are converted to lists.
         ground_truth_conformer_selection: Ground-truth conformer selection string(s). Single strings are converted to lists.
+        record_presence: Whether to add the `is_present_in_input` annotation, recording
+            which atoms carry coordinates from the input file. This must happen before
+            the NaN-to-`-1` substitution below, which otherwise erases the distinction
+            between "absent from the file" and "at (-1, -1, -1)". Only used in scoring
+            mode, so that the normal prediction path's atom array is unchanged.
+            Defaults to False.
 
     Returns:
         The same AtomArray with `is_input_file_templated` and `ground_truth_conformer_policy` updated.
@@ -601,6 +649,9 @@ def apply_conformer_and_template_selections(
     atom_array = apply_ground_truth_conformer_selection(
         atom_array, ground_truth_conformer_selection
     )
+    if record_presence:
+        # Must precede the sentinel substitution below.
+        atom_array = record_input_presence(atom_array)
     # Safety: avoid unexpected behavior downstream
     atom_array.coord[np.isnan(atom_array.coord)] = -1
     return atom_array

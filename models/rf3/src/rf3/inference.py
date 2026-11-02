@@ -51,6 +51,10 @@ def run_inference(cfg: DictConfig) -> None:
         ),
         "cyclic_chains": cfg.get("cyclic_chains", []),
         "add_missing_atoms": cfg.get("add_missing_atoms", True),
+        "score_structure": cfg.get("score_structure", False),
+        "score_structure_min_rep_atom_coverage": cfg.get(
+            "score_structure_min_rep_atom_coverage", 0.0
+        ),
     }
 
     # Create init config with only __init__ params

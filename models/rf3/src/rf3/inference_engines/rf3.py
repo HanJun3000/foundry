@@ -22,6 +22,13 @@ from torch.utils.data import DataLoader
 from foundry.inference_engines.base import BaseInferenceEngine
 from foundry.metrics.metric import MetricManager
 from foundry.utils.ddp import RankedLogger
+from rf3.data.score_structure import (
+    ScoringSpec,
+    build_score_coordinates,
+    check_scoring_coverage,
+    log_scoring_summary,
+    summarize_scoring,
+)
 from rf3.model.RF3 import ShouldEarlyStopFn
 from rf3.utils.inference import (
     InferenceInput,
@@ -108,6 +115,7 @@ class RF3Output:
     confidences: dict | None = None
     sample_idx: int = 0
     seed: int = 0
+    scoring_info: dict | None = None
 
     def dump(
         self,
@@ -144,6 +152,11 @@ class RF3Output:
         if dump_full_confidences and self.confidences:
             with open(f"{base_path}_confidences.json", "w") as f:
                 dump_json_compact_arrays(self.confidences, f)
+
+        # Save scoring_info.json (structure-scoring mode only)
+        if self.scoring_info:
+            with open(f"{base_path}_scoring_info.json", "w") as f:
+                dump_json_compact_arrays(self.scoring_info, f)
 
 
 def dump_ranking_scores(
@@ -344,6 +357,9 @@ class RF3InferenceEngine(BaseInferenceEngine):
         # Dataset overrides
         self.early_stopping_plddt_threshold = early_stopping_plddt_threshold
         self.compress_outputs = compress_outputs
+        # (Kept for the scoring-mode advisory in `run`; the pipeline reads it from
+        # `transform_overrides`)
+        self.diffusion_batch_size = diffusion_batch_size
 
     def initialize(self):
         # Log checkpoint path on first init (base class logger may be suppressed in quiet mode)
@@ -401,6 +417,8 @@ class RF3InferenceEngine(BaseInferenceEngine):
         ground_truth_conformer_selection: list[str] | str | None = None,
         cyclic_chains: list[str] = [],
         add_missing_atoms: bool = True,
+        score_structure: bool = False,
+        score_structure_min_rep_atom_coverage: float = 0.0,
     ) -> dict[str, dict] | None:
         """Run inference on inputs.
 
@@ -421,12 +439,57 @@ class RF3InferenceEngine(BaseInferenceEngine):
           add_missing_atoms: Whether to add missing atoms from the CCD when parsing CIF/PDB
             inputs. Has no effect when inputs are already InferenceInput or AtomArray objects.
             Defaults to ``True``.
+          score_structure: Structure-scoring mode. When ``True``, the confidence head is
+            evaluated on the *input* coordinates instead of on diffusion samples, giving
+            pLDDT/PAE/pTM/ipTM "as if RF3 had predicted this structure". The sequence is
+            taken from the input as usual, so the input file's sequence must be the intended
+            one. Requires a checkpoint with a confidence head; disables early stopping; is
+            incompatible with ``dump_trajectories``; and ``diffusion_batch_size=1`` is
+            recommended. A JSON input may set ``score_structure`` per job, which overrides
+            this run-level default. Defaults to ``False``.
+          score_structure_min_rep_atom_coverage: Refuse to score an input that provides
+            less than this fraction of the token representative atoms (CB for amino
+            acids, CA for glycine, C4/C2 for nucleotides, every ligand atom) — the only
+            coordinates the confidence head reads. Experimental structures routinely miss
+            a few (disordered loops, N-terminal residues), so the default of ``0.0``
+            never refuses and only warns, naming the affected residues in the log and in
+            ``<example_id>_scoring_info.json``. Only used when scoring. Defaults to
+            ``0.0``.
 
         Returns:
           If ``out_dir`` is None: Dict mapping example_id to list of RF3Output objects.
           If ``out_dir`` is set: None (results saved to disk).
         """
         self.initialize()
+
+        # Structure-scoring mode guard rails
+        run_scoring_spec = (
+            ScoringSpec(
+                enabled=True,
+                min_representative_atom_coverage=score_structure_min_rep_atom_coverage,
+            )
+            if score_structure
+            else None
+        )
+        if score_structure:
+            if dump_trajectories:
+                raise ValueError(
+                    "`dump_trajectories` is not supported with `score_structure`: in "
+                    "scoring mode the diffusion rollout is skipped (or used only to fill "
+                    "atoms the input does not provide), so there is no trajectory to dump."
+                )
+            if self.diffusion_batch_size > 1:
+                ranked_logger.warning(
+                    f"score_structure=True with diffusion_batch_size="
+                    f"{self.diffusion_batch_size}. Samples are identical when the input "
+                    "covers every atom, and differ only in the filled atoms otherwise; "
+                    "diffusion_batch_size=1 is recommended."
+                )
+            if self.early_stopping_plddt_threshold:
+                ranked_logger.info(
+                    "score_structure=True: early stopping is disabled (it would return "
+                    "without confidences for a low-confidence first recycle)."
+                )
 
         # Setup output directory if provided
         out_dir = Path(out_dir) if out_dir else None
@@ -466,6 +529,7 @@ class RF3InferenceEngine(BaseInferenceEngine):
                     inputs,
                     template_selection=template_selection,
                     ground_truth_conformer_selection=ground_truth_conformer_selection,
+                    score_structure=run_scoring_spec,
                 )
             ]
         elif isinstance(inputs, list) and all(isinstance(i, AtomArray) for i in inputs):
@@ -476,6 +540,7 @@ class RF3InferenceEngine(BaseInferenceEngine):
                     example_id=f"inference_{i}",
                     template_selection=template_selection,
                     ground_truth_conformer_selection=ground_truth_conformer_selection,
+                    score_structure=run_scoring_spec,
                 )
                 for i, arr in enumerate(inputs)
             ]
@@ -490,6 +555,7 @@ class RF3InferenceEngine(BaseInferenceEngine):
                 template_selection=template_selection,
                 ground_truth_conformer_selection=ground_truth_conformer_selection,
                 add_missing_atoms=add_missing_atoms,
+                score_structure=run_scoring_spec,
             )
         else:
             raise ValueError(f"Unsupported inputs type: {type(inputs)}")
@@ -498,6 +564,13 @@ class RF3InferenceEngine(BaseInferenceEngine):
         if cyclic_chains:
             for input_spec in inference_inputs:
                 input_spec.cyclic_chains = cyclic_chains
+
+        # Apply the run-level scoring default to inputs that did not specify one
+        # (`InferenceInput` objects handed in directly, or JSON jobs without the field)
+        if run_scoring_spec is not None:
+            for input_spec in inference_inputs:
+                if input_spec.score_structure is None:
+                    input_spec.score_structure = run_scoring_spec
 
         # make InferenceInputDataset
         inference_dataset = InferenceInputDataset(inference_inputs)
@@ -544,10 +617,45 @@ class RF3InferenceEngine(BaseInferenceEngine):
             # Run through Transform pipeline
             pipeline_output = self.pipeline(input_spec.to_pipeline_input())
 
+            # Structure-scoring mode: take the coordinates the confidence head will see
+            # from the input structure instead of from the diffusion samples
+            scoring_spec = input_spec.score_structure
+            is_scoring = scoring_spec is not None and scoring_spec.enabled
+            X_score_L = None
+            score_mask_L = None
+            scoring_info = None
+            if is_scoring:
+                assert scoring_spec is not None  # narrowed by `is_scoring`
+                if "confidence_feats" not in pipeline_output:
+                    raise ValueError(
+                        "`score_structure` requires a checkpoint with a confidence head, "
+                        "but the featurized example has no `confidence_feats`. Scoring "
+                        "evaluates the confidence head on the given coordinates; without "
+                        "that head there is nothing to report."
+                    )
+                X_score_L, score_mask_L = build_score_coordinates(pipeline_output)
+                scoring_info = summarize_scoring(
+                    example_id=input_spec.example_id,
+                    atom_array=pipeline_output["atom_array"],
+                    score_mask_L=score_mask_L,
+                    rep_atom_idxs=pipeline_output["ground_truth"]["rep_atom_idxs"],
+                    diffusion_skipped=bool(score_mask_L.all()),
+                    structure_path=input_spec.source_path,
+                )
+                log_scoring_summary(scoring_info)
+                check_scoring_coverage(
+                    scoring_info,
+                    min_representative_atom_coverage=(
+                        scoring_spec.min_representative_atom_coverage
+                    ),
+                )
+
             # Setup early stopping function if configured
+            # (Never in scoring mode: an early exit returns without confidences)
             should_early_stop_fn = None
             if (
-                "confidence_feats" in pipeline_output
+                not is_scoring
+                and "confidence_feats" in pipeline_output
                 and self.early_stopping_plddt_threshold
                 and self.early_stopping_plddt_threshold > 0
             ):
@@ -560,19 +668,25 @@ class RF3InferenceEngine(BaseInferenceEngine):
             # Model inference
             with torch.no_grad():
                 pipeline_output = self.trainer.fabric.to_device(pipeline_output)
+                validation_step_kwargs: dict[str, Any] = {}
                 if should_early_stop_fn:
-                    valid_step_outs = self.trainer.validation_step(
-                        batch=pipeline_output,
-                        batch_idx=0,
-                        compute_metrics=True,
-                        should_early_stop_fn=should_early_stop_fn,
+                    validation_step_kwargs["should_early_stop_fn"] = (
+                        should_early_stop_fn
                     )
-                else:
-                    valid_step_outs = self.trainer.validation_step(
-                        batch=pipeline_output,
-                        batch_idx=0,
-                        compute_metrics=True,
+                if is_scoring:
+                    # (Moved with the example, so scoring runs on the model's device)
+                    validation_step_kwargs["X_score_L"] = self.trainer.fabric.to_device(
+                        X_score_L
                     )
+                    validation_step_kwargs["score_mask_L"] = (
+                        self.trainer.fabric.to_device(score_mask_L)
+                    )
+                valid_step_outs = self.trainer.validation_step(
+                    batch=pipeline_output,
+                    batch_idx=0,
+                    compute_metrics=True,
+                    **validation_step_kwargs,
+                )
                 network_output = valid_step_outs["network_output"]
                 metrics_output = valid_step_outs["metrics_output"]
 
@@ -630,7 +744,7 @@ class RF3InferenceEngine(BaseInferenceEngine):
                     sample_atom_array = atom_array_stack
 
                 # Compile confidence outputs in AF3 format (if available)
-                summary_confidences = {}
+                summary_confidences: dict[str, Any] = {}
                 confidences = None
                 if "plddt" in network_output:
                     conf_outs = compile_af3_style_confidence_outputs(
@@ -684,6 +798,17 @@ class RF3InferenceEngine(BaseInferenceEngine):
                     )
                     summary_confidences["ranking_score"] = round(ranking_score, 4)
 
+                # Record the provenance of the scored coordinates alongside the metrics
+                if scoring_info is not None:
+                    summary_confidences["scoring"] = {
+                        "enabled": True,
+                        "coverage": scoring_info["atoms"]["coverage"],
+                        "representative_atom_coverage": scoring_info[
+                            "representative_atoms"
+                        ]["coverage"],
+                        "diffusion_skipped": scoring_info["diffusion_skipped"],
+                    }
+
                 rf3_outputs.append(
                     RF3Output(
                         example_id=input_spec.example_id,
@@ -692,6 +817,7 @@ class RF3InferenceEngine(BaseInferenceEngine):
                         confidences=confidences,
                         sample_idx=sample_idx,
                         seed=self.seed if self.seed is not None else 0,
+                        scoring_info=scoring_info,
                     )
                 )
 
@@ -700,6 +826,12 @@ class RF3InferenceEngine(BaseInferenceEngine):
                 # Save to disk in AlphaFold3-style directory structure
                 # Top-level: ranking_scores.csv, best model, best summary
                 dump_ranking_scores(rf3_outputs, example_out_dir, input_spec.example_id)
+                if scoring_info is not None:
+                    with open(
+                        example_out_dir / f"{input_spec.example_id}_scoring_info.json",
+                        "w",
+                    ) as f:
+                        dump_json_compact_arrays(scoring_info, f)
                 dump_top_ranked_outputs(
                     rf3_outputs,
                     example_out_dir,

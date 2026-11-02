@@ -118,6 +118,10 @@ def configure_minimal_inference_logging() -> None:
     # Keep model-specific inference engine loggers at INFO for progress messages
     logging.getLogger("rf3.inference_engines").setLevel(logging.INFO)
     logging.getLogger("rfd3.engine").setLevel(logging.INFO)
+    # RF3 structure scoring reports the chain mapping and atom coverage of the scored
+    # input, and warns when the input is missing representative atoms. Both describe
+    # what was actually scored, so they must survive quiet mode.
+    logging.getLogger("rf3.data.score_structure").setLevel(logging.INFO)
 
     # Suppress warnings
     warnings.filterwarnings("ignore")
