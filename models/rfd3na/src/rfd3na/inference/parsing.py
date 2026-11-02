@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
+import numpy.typing as npt
 from biotite.structure import AtomArray, get_residue_starts
 from pydantic import (
     BaseModel,
@@ -9,8 +10,7 @@ from pydantic import (
     model_serializer,
     model_validator,
 )
-
-from foundry.utils.components import (
+from rfd3na._core.utils.components import (
     ComponentStr,
     fetch_mask_from_idx,
     get_name_mask,
@@ -33,7 +33,7 @@ class InputSelection(BaseModel):
         ..., description="Validated selection dictionary", exclude=True
     )
     raw: Any = Field(..., description="Original input value")
-    mask: np.ndarray[np.bool_] = Field(
+    mask: npt.NDArray[np.bool_] = Field(
         ..., description="Boolean mask over atom array", exclude=True
     )
     tokens: Optional[Dict[ComponentStr | str, AtomArray]] = Field(
@@ -95,6 +95,10 @@ class InputSelection(BaseModel):
         return self.mask
 
     def get_tokens(self, aa):
+        if aa is None:
+            if self.data:
+                raise ValueError("Input atoms are required for selected motif tokens")
+            return {}
         _, _, tokens = from_any_(v=self.raw, atom_array=aa)
         return tokens
 

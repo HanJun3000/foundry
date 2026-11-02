@@ -16,8 +16,11 @@ from io import StringIO
 from pathlib import Path
 from typing import Any
 
+import biotite.structure as struc
 import numpy as np
 import pytest
+from atomworks.io.parser import parse_atom_array
+from atomworks.io.utils.ccd import add_annotations_from_ccd
 from biotite.structure import AtomArray
 from mpnn.transforms.feature_aggregation.token_encodings import (
     MPNN_TOKEN_ENCODING,
@@ -88,30 +91,6 @@ def _make_simple_inference_output() -> MPNNInferenceOutput:
     }
     return MPNNInferenceOutput(
         atom_array=atom_array, input_dict=input_dict, output_dict=output_dict
-    )
-
-
-def _patch_token_helpers(monkeypatch) -> None:
-    """
-    Patch get_token_starts and spread_token_wise in mpnn.utils.inference
-    to a simple 1-atom-per-token behaviour so we don't depend on the full
-    atomworks implementation in tests.
-    """
-
-    def fake_get_token_starts(atom_array: AtomArray) -> np.ndarray:
-        # One token per atom.
-        return np.arange(atom_array.array_length(), dtype=int)
-
-    def fake_spread_token_wise(
-        atom_array: AtomArray, token_values: np.ndarray
-    ) -> np.ndarray:
-        # Since we define 1 atom per token in tests, we can just return
-        # token_values directly for both 1D and 2D cases.
-        return token_values
-
-    monkeypatch.setattr("mpnn.utils.inference.get_token_starts", fake_get_token_starts)
-    monkeypatch.setattr(
-        "mpnn.utils.inference.spread_token_wise", fake_spread_token_wise
     )
 
 
@@ -296,6 +275,8 @@ def test_cli_to_json_builds_single_input_and_parses_fields() -> None:
             "A,B",
             "--remove_waters",
             "True",
+            "--add_missing_atoms",
+            "False",
             "--occupancy_threshold_sidechain",
             "0.5",
             "--occupancy_threshold_backbone",
@@ -350,6 +331,7 @@ def test_cli_to_json_builds_single_input_and_parses_fields() -> None:
     assert inp["number_of_batches"] == 2
     assert inp["remove_ccds"] == ["A", "B"]
     assert inp["remove_waters"] is True
+    assert inp["add_missing_atoms"] is False
     assert inp["occupancy_threshold_sidechain"] == 0.5
     assert inp["occupancy_threshold_backbone"] == 0.6
     assert inp["undesired_res_names"] == ["UNK", "HOH"]
@@ -516,17 +498,184 @@ def test_from_atom_array_and_dict_invalid_scalar_settings_raise() -> None:
 
 
 ###############################################################################
+# MPNNInferenceInput: parser overrides for an AtomArray input
+###############################################################################
+
+
+def _atom_array_with_ligands(ligands: dict[str, str]) -> AtomArray:
+    """CA-only ALA/GLY/SER on chain A, plus one chain per ``{res_name: smiles}``."""
+    from rdkit import Chem
+    from rdkit.Chem import AllChem
+
+    atoms = [
+        struc.Atom(
+            [3.8 * i, 0.0, 0.0],
+            chain_id="A",
+            res_id=i + 1,
+            ins_code="",
+            res_name=res_name,
+            atom_name="CA",
+            element="C",
+        )
+        for i, res_name in enumerate(["ALA", "GLY", "SER"])
+    ]
+    for i, (res_name, smiles) in enumerate(ligands.items()):
+        mol = Chem.AddHs(Chem.MolFromSmiles(smiles))
+        AllChem.EmbedMolecule(mol, randomSeed=7)
+        mol = Chem.RemoveHs(mol)
+        conf = mol.GetConformer()
+        counts: dict[str, int] = {}
+        for atom in mol.GetAtoms():
+            element = atom.GetSymbol()
+            counts[element] = counts.get(element, 0) + 1
+            xyz = conf.GetAtomPosition(atom.GetIdx())
+            atoms.append(
+                struc.Atom(
+                    [xyz.x, xyz.y, xyz.z],
+                    chain_id=chr(ord("B") + i),
+                    res_id=1,
+                    ins_code="",
+                    res_name=res_name,
+                    atom_name=f"{element}{counts[element]}",
+                    element=element,
+                    hetero=True,
+                )
+            )
+    atom_array = struc.array(atoms)
+    atom_array.set_annotation("occupancy", np.ones(len(atom_array)))
+    return atom_array
+
+
+# PHT is the CCD code of phthalate, not phenytoin.
+PHENYTOIN = "O=C1NC(=O)C(N1)(c1ccccc1)c1ccccc1"
+
+
+def test_add_missing_atoms_false_keeps_ligand_atoms_as_given() -> None:
+    atom_array = _atom_array_with_ligands({"PHT": PHENYTOIN})
+
+    kept = MPNNInferenceInput.from_atom_array_and_dict(
+        atom_array=atom_array, input_dict={"add_missing_atoms": False}
+    ).atom_array
+
+    ligand = kept[kept.res_name == "PHT"]
+    assert len(ligand) == 19
+    assert set(ligand.element) == {"C", "N", "O"}
+    assert not np.isnan(ligand.coord).any()
+
+
+def test_atom_array_defaults_are_unchanged() -> None:
+    atom_array = _atom_array_with_ligands({"GOL": "OCC(O)CO", "HOH": "O"})
+
+    result = MPNNInferenceInput.from_atom_array_and_dict(
+        atom_array=atom_array, input_dict={}
+    ).atom_array
+
+    expected = atom_array.copy()
+    add_annotations_from_ccd(expected, annotations=["charge"])
+    expected = parse_atom_array(expected)["assemblies"]["1"][0]
+    assert list(result.res_name) == list(expected.res_name)
+    assert list(result.atom_name) == list(expected.atom_name)
+    # The parser defaults still remove crystallization aids and waters.
+    assert {"GOL", "HOH"}.isdisjoint(result.res_name)
+
+
+def test_atom_array_route_applies_remove_ccds_and_remove_waters() -> None:
+    atom_array = _atom_array_with_ligands({"GOL": "OCC(O)CO", "HOH": "O"})
+
+    kept = MPNNInferenceInput.from_atom_array_and_dict(
+        atom_array=atom_array,
+        input_dict={"remove_ccds": [], "remove_waters": False},
+    ).atom_array
+
+    assert {"GOL", "HOH"} <= set(kept.res_name)
+
+
+def test_atom_array_route_forwards_only_the_fields_the_caller_set(
+    monkeypatch,
+) -> None:
+    seen: dict[str, Any] = {}
+
+    def fake_parse_atom_array(atom_array, **kwargs):
+        seen.clear()
+        seen.update(kwargs)
+        return {"assemblies": {"1": [atom_array]}}
+
+    monkeypatch.setattr("mpnn.utils.inference.parse_atom_array", fake_parse_atom_array)
+
+    MPNNInferenceInput.from_atom_array_and_dict(
+        atom_array=_make_simple_atom_array(), input_dict={}
+    )
+    assert seen == {}
+
+    overrides = {
+        "remove_ccds": ["GOL"],
+        "remove_waters": False,
+        "add_missing_atoms": False,
+    }
+    MPNNInferenceInput.from_atom_array_and_dict(
+        atom_array=_make_simple_atom_array(), input_dict=overrides
+    )
+    assert seen == overrides
+
+
+def test_atom_array_without_assembly_still_needs_structure_path(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "mpnn.utils.inference.parse_atom_array", lambda atom_array, **kwargs: {}
+    )
+
+    with pytest.raises(ValueError, match="structure_path"):
+        MPNNInferenceInput.from_atom_array_and_dict(
+            atom_array=_make_simple_atom_array(), input_dict={}
+        )
+
+
+def test_structure_path_route_forwards_parser_overrides(monkeypatch) -> None:
+    seen: dict[str, Any] = {}
+
+    def fake_parse(filename, **kwargs):
+        seen.clear()
+        seen.update(kwargs)
+        return {"asym_unit": [_make_simple_atom_array()]}
+
+    monkeypatch.setattr("mpnn.utils.inference.parse", fake_parse)
+
+    input_dict: dict[str, Any] = {"structure_path": "structure.cif"}
+    MPNNInferenceInput.apply_defaults(input_dict)
+    MPNNInferenceInput.build_atom_array(input_dict)
+    assert seen["add_missing_atoms"] is True
+    assert seen["remove_ccds"] == []
+
+    input_dict.update(add_missing_atoms=False, remove_waters=False)
+    MPNNInferenceInput.build_atom_array(input_dict)
+    assert seen["add_missing_atoms"] is False
+    assert seen["remove_waters"] is False
+
+
+@pytest.mark.parametrize(
+    "field, value",
+    [("add_missing_atoms", "no"), ("remove_waters", "yes"), ("remove_ccds", "GOL")],
+)
+def test_parser_overrides_are_validated(field: str, value: Any) -> None:
+    with pytest.raises(TypeError, match=field):
+        MPNNInferenceInput.from_atom_array_and_dict(
+            atom_array=_make_simple_atom_array(), input_dict={field: value}
+        )
+
+
+###############################################################################
 # MPNNInferenceInput: annotation behaviour
 ###############################################################################
 
 
-def test_design_scope_annotation_from_fixed_residues(monkeypatch) -> None:
+def test_design_scope_annotation_from_fixed_residues() -> None:
     """
     If fixed_residues is provided, the design mask should be True for all
     residues except the fixed ones.
-    """
-    _patch_token_helpers(monkeypatch)
 
+    ``from_atom_array_and_dict`` re-parses the input through atomworks, which
+    expands the CA-only array to full atoms, so the annotation is per atom;
+    assert the per-residue contract via ``res_id`` rather than a fixed length.
+    """
     atom_array = _make_simple_atom_array(n_residues=3)
     input_dict = {
         "fixed_residues": ["A2"],
@@ -537,21 +686,20 @@ def test_design_scope_annotation_from_fixed_residues(monkeypatch) -> None:
         input_dict=input_dict,
     )
 
-    design_mask = inference_input.atom_array.get_annotation(
-        "mpnn_designed_residue_mask"
-    )
+    annotated = inference_input.atom_array
+    design_mask = annotated.get_annotation("mpnn_designed_residue_mask")
+    res_id = annotated.res_id
     assert design_mask.dtype == bool
-    # Residues: 1, 2, 3 -> design all except residue 2.
-    assert design_mask.tolist() == [True, False, True]
+    # Residue 2 is fixed -> not designed; residues 1 and 3 are designed.
+    assert not design_mask[res_id == 2].any()
+    assert design_mask[res_id != 2].all()
 
 
-def test_temperature_annotation_global_and_per_residue(monkeypatch) -> None:
+def test_temperature_annotation_global_and_per_residue() -> None:
     """
     Global temperature should apply to all residues, with per-residue entries
     overriding the global value for specified residues.
     """
-    _patch_token_helpers(monkeypatch)
-
     atom_array = _make_simple_atom_array(n_residues=3)
     input_dict = {
         "temperature": 0.1,
@@ -563,19 +711,20 @@ def test_temperature_annotation_global_and_per_residue(monkeypatch) -> None:
         input_dict=input_dict,
     )
 
-    temps = inference_input.atom_array.get_annotation("mpnn_temperature")
-    assert temps.shape == (3,)
-    np.testing.assert_allclose(temps, [0.1, 0.2, 0.1], rtol=1e-6)
+    annotated = inference_input.atom_array
+    temps = annotated.get_annotation("mpnn_temperature")
+    res_id = annotated.res_id
+    # Per-residue override for residue 2; global value elsewhere.
+    np.testing.assert_allclose(temps[res_id == 2], 0.2, rtol=1e-6)
+    np.testing.assert_allclose(temps[res_id != 2], 0.1, rtol=1e-6)
 
 
-def test_bias_annotation_combines_global_and_omit(monkeypatch) -> None:
+def test_bias_annotation_combines_global_and_omit() -> None:
     """
     Global bias and omission should be reflected in 'mpnn_bias':
     - ALA gets +1.0 everywhere.
     - GLY gets a large negative omit bias everywhere.
     """
-    _patch_token_helpers(monkeypatch)
-
     atom_array = _make_simple_atom_array(n_residues=3)
     input_dict = {
         "bias": {"ALA": 1.0},
@@ -587,29 +736,28 @@ def test_bias_annotation_combines_global_and_omit(monkeypatch) -> None:
         input_dict=input_dict,
     )
 
-    bias_arr = inference_input.atom_array.get_annotation("mpnn_bias")
+    annotated = inference_input.atom_array
+    bias_arr = annotated.get_annotation("mpnn_bias")
     # shape: [n_atoms, vocab_size]
-    assert bias_arr.shape[0] == 3
+    assert bias_arr.shape[0] == annotated.array_length()
 
     token_to_idx = MPNN_TOKEN_ENCODING.token_to_idx
     idx_ala = token_to_idx["ALA"]
     idx_gly = token_to_idx["GLY"]
 
-    # All residues: bias for ALA is 1.0
+    # All atoms: bias for ALA is 1.0
     np.testing.assert_allclose(bias_arr[:, idx_ala], 1.0, rtol=1e-6)
 
-    # All residues: bias for GLY is a large negative omit bias (~ -1e8)
+    # All atoms: bias for GLY is a large negative omit bias (~ -1e8)
     # We don't hard-code the exact value, but ensure it's very negative.
     assert np.all(bias_arr[:, idx_gly] < -1e6)
 
 
-def test_symmetry_annotation_residues_and_weights(monkeypatch) -> None:
+def test_symmetry_annotation_residues_and_weights() -> None:
     """
     Residue-based symmetry groups should get the same group ID, and
     weights should follow symmetry_residues_weights.
     """
-    _patch_token_helpers(monkeypatch)
-
     atom_array = _make_simple_atom_array(n_residues=3)
     input_dict = {
         "symmetry_residues": [["A1", "A3"]],
@@ -621,42 +769,44 @@ def test_symmetry_annotation_residues_and_weights(monkeypatch) -> None:
         input_dict=input_dict,
     )
 
-    arr = inference_input.atom_array
-    groups = arr.get_annotation("mpnn_symmetry_equivalence_group")
-    weights = arr.get_annotation("mpnn_symmetry_weight")
-
-    assert groups.shape == (3,)
-    assert weights.shape == (3,)
+    annotated = inference_input.atom_array
+    res_id = annotated.res_id
+    groups = annotated.get_annotation("mpnn_symmetry_equivalence_group")
+    weights = annotated.get_annotation("mpnn_symmetry_weight")
 
     # Residues 1 and 3 share the same group; residue 2 is different.
-    assert groups[0] == groups[2]
-    assert groups[1] != groups[0]
+    assert (groups[res_id == 1] == groups[res_id == 3][0]).all()
+    assert groups[res_id == 2][0] != groups[res_id == 1][0]
 
     # Weights: residue 1 -> 1.0, residue 3 -> 0.5, residue 2 -> default 1.0
-    np.testing.assert_allclose(weights, [1.0, 1.0, 0.5], rtol=1e-6)
+    np.testing.assert_allclose(weights[res_id == 1], 1.0, rtol=1e-6)
+    np.testing.assert_allclose(weights[res_id == 3], 0.5, rtol=1e-6)
+    np.testing.assert_allclose(weights[res_id == 2], 1.0, rtol=1e-6)
 
 
-def test_annotate_atom_array_preserves_existing_design_mask(monkeypatch) -> None:
+def test_annotate_atom_array_preserves_existing_design_mask() -> None:
     """
     If 'mpnn_designed_residue_mask' already exists on the atom array,
-    design-scope fields in the input_dict should be ignored.
-    """
-    _patch_token_helpers(monkeypatch)
+    ``annotate_atom_array`` leaves it untouched and ignores design-scope fields.
 
+    This is tested against ``annotate_atom_array`` directly rather than
+    ``from_atom_array_and_dict``: the latter re-parses the input through
+    atomworks ``parse_atom_array``, which drops custom annotations before
+    annotation runs, defeating the preservation the docstring promises (that
+    entry-point discrepancy is filed to .ai/roadmap.md).
+    """
     atom_array = _make_simple_atom_array(n_residues=3)
     existing_mask = np.array([False, True, False], dtype=bool)
     atom_array.set_annotation("mpnn_designed_residue_mask", existing_mask)
 
-    input_dict = {
-        "fixed_residues": ["A2"],  # would normally change design mask
+    input_dict: dict[str, Any] = {
+        "fixed_residues": ["A2"],  # would normally change the design mask
     }
+    MPNNInferenceInput.apply_defaults(input_dict)
 
-    inference_input = MPNNInferenceInput.from_atom_array_and_dict(
-        atom_array=atom_array,
-        input_dict=input_dict,
-    )
+    annotated = MPNNInferenceInput.annotate_atom_array(atom_array, input_dict)
 
-    new_mask = inference_input.atom_array.get_annotation("mpnn_designed_residue_mask")
+    new_mask = annotated.get_annotation("mpnn_designed_residue_mask")
     assert np.array_equal(new_mask, existing_mask)
 
 

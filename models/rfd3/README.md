@@ -75,25 +75,25 @@ you will need to change the path in the `.json` file(s) before running.
 <table>
   <tr>
     <td align="center">
-      <h3><a href="./docs/na_binder_design.md">Nucleic acid binder design</a></h3>
+      <h3><a href="./docs/examples/na_binder_design.md">Nucleic acid binder design</a></h3>
       <img src="docs/.assets/dna.png" height="150" />
     </td>
     <td align="center">
-      <h3><a href="./docs/sm_binder_design.md">Small molecule binder design</a></h3>
+      <h3><a href="./docs/examples/sm_binder_design.md">Small molecule binder design</a></h3>
       <img src="docs/.assets/sm.png" height="150" />
     </td>
     <td align="center">
-      <h3><a href="./docs/protein_binder_design.md">Protein binder design</a></h3>
+      <h3><a href="./docs/examples/protein_binder_design.md">Protein binder design</a></h3>
       <img src="docs/.assets/ppi.png" height="150" />
     </td>
   </tr>
   <tr>
     <td align="center">
-      <h3><a href="./docs/enzyme_design.md">Enzyme design</a></h3>
+      <h3><a href="./docs/examples/enzyme_design.md">Enzyme design</a></h3>
       <img src="docs/.assets/enzyme.png" height="150" />
     </td>
     <td align="center">
-      <h3><a href="./docs/symmetry.md">Symmetric design</a></h3>
+      <h3><a href="./docs/examples/symmetry.md">Symmetric design</a></h3>
       <img src="docs/.assets/symm.png" height="150" />
     </td>
   </tr>
@@ -183,11 +183,34 @@ additionally complete the following steps:
 2. Follow the installation instruction here: https://www.ebi.ac.uk/thornton-srv/software/HBPLUS/install.html
 3. Update `HBPLUS_PATH` in `foundry/.env` file with the path to your `hbplus` executable.
 
+## CUDA inference performance
+
+Inference defaults to `compile_model=true` and `inference_kernel_backend=auto`.
+Set `RFD3_COMPILE_CACHE_DIR` to choose a persistent compiler cache directory;
+when unset, `compile_cache_dir` is `None` and framework cache settings are unchanged.
+Custom CUDA kernels support
+padded input batches and multiple diffusion samples inside compiled inference.
+Eager single-input inference also supports token/atom-transformer CUDA graphs.
+See [setup, measurements, numerical checks and profiling commands](docs/inference_acceleration.md).
+
 ## Citation
 
 If you use this code or data in your work, please consider citing:
 
 ```bibtex
+@article{butcher2026_rfdiffusion3_science,
+    author = {Jasper Butcher  and Rohith Krishna  and Raktim Mitra  and Seth M. Woodbury  and Donghyo Kim  and Rafael I. Brent  and Yanjing Li  and Nathaniel Corley  and Andrew Favor  and Anqi Chen  and Paul T. Kim  and Jonathan Funk  and Gabriela Bastidas Reinoso  and Kejia Wu  and Aiko Muraishi  and Helen E. Eisenach  and Saman Salike  and Simon Mathis  and Tuscan Rock Thompson  and Antonia Ruder  and Enisha Sehgal  and Andrew Kubaney  and Jie Chen  and Yuliya Politanska  and Brian Coventry  and Odin Zhang  and Florence J. Hardy  and Bo Qiang  and Kieran Didi  and Maxwell Kazman  and Lars L. Schaaf  and Frank DiMaio  and David Baker },
+    title = {Atomic functional site scaffolding in biopolymers with RFdiffusion3},
+    journal = {Science},
+    volume = {0},
+    number = {0},
+    pages = {eaeh2982},
+    year = {},
+    doi = {10.1126/science.aeh2982},
+    URL = {https://www.science.org/doi/abs/10.1126/science.aeh2982},
+    eprint = {https://www.science.org/doi/pdf/10.1126/science.aeh2982}
+}
+
 @article {butcher2025_rfdiffusion3,
 	author = {Butcher, Jasper and Krishna, Rohith and Mitra, Raktim and Brent, Rafael Isaac and Li, Yanjing and Corley, Nathaniel and Kim, Paul T and Funk, Jonathan and Mathis, Simon Valentin and Salike, Saman and Muraishi, Aiko and Eisenach, Helen and Thompson, Tuscan Rock and Chen, Jie and Politanska, Yuliya and Sehgal, Enisha and Coventry, Brian and Zhang, Odin and Qiang, Bo and Didi, Kieran and Kazman, Maxwell and DiMaio, Frank and Baker, David},
 	title = {De novo Design of All-atom Biomolecular Interactions with RFdiffusion3},

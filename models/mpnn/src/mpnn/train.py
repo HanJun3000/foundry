@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 import torch
 from atomworks.io.parser import STANDARD_PARSER_ARGS
-from atomworks.ml.datasets.pandas_dataset import PandasDataset, StructuralDatasetWrapper
+from atomworks.ml.datasets.pandas_dataset import PandasDataset
 from atomworks.ml.datasets.parsers.default_metadata_row_parsers import GenericDFParser
 from atomworks.ml.samplers import (
     DistributedMixedSampler,
@@ -15,8 +15,10 @@ from atomworks.ml.samplers import (
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
-from foundry.callbacks.metrics_logging import StoreValidationMetricsInDFCallback
-from foundry.utils.datasets import wrap_dataset_and_sampler_with_fallbacks
+from mpnn._core.callbacks.metrics_logging import StoreValidationMetricsInDFCallback
+from mpnn._core.datasets.structure import StructuralDatasetWrapper
+from mpnn._core.utils.datasets import wrap_dataset_and_sampler_with_fallbacks
+from mpnn._core.utils.weights import CheckpointConfig
 from mpnn.collate.feature_collator import TokenBudgetAwareFeatureCollator
 from mpnn.pipelines.mpnn import build_mpnn_transform_pipeline
 from mpnn.samplers.samplers import PaddedTokenBudgetBatchSampler
@@ -38,7 +40,12 @@ else:
     raise ValueError(f"Unknown model_type: {model_type}")
 
 
-def create_noam_scheduler(optimizer, d_model, warmup_steps=4000, factor=2):
+def create_noam_scheduler(
+    optimizer: torch.optim.Optimizer,
+    d_model: int,
+    warmup_steps: int = 4000,
+    factor: float = 2,
+) -> torch.optim.lr_scheduler.LambdaLR:
     """
     Create a NoamOpt-style scheduler using standard PyTorch components.
 
@@ -52,7 +59,7 @@ def create_noam_scheduler(optimizer, d_model, warmup_steps=4000, factor=2):
         LambdaLR scheduler that implements NoamOpt schedule
     """
 
-    def noam_lambda(step):
+    def noam_lambda(step: int) -> float:
         # NoamOpt formula: factor * (d_model ** (-0.5)) * min(step ** (-0.5), step * warmup ** (-1.5))
         base_lr = factor * (d_model ** (-0.5))
         if step == 0:
@@ -65,7 +72,7 @@ def create_noam_scheduler(optimizer, d_model, warmup_steps=4000, factor=2):
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=noam_lambda)
 
 
-def get_num_tokens(df, idx):
+def get_num_tokens(df: pd.DataFrame, idx: int | list[int] | tuple[int, ...]) -> int:
     """
     Extract the number of non-atomized tokens for a given index.
 
@@ -170,7 +177,9 @@ train_sampler = DistributedMixedSampler(
     datasets_info=[
         {
             "sampler": WeightedRandomSampler(
-                train_weights, len(train_structural_dataset)
+                # torch types weights as Sequence[float]; a Tensor is accepted at runtime.
+                train_weights,  # type: ignore[arg-type]
+                len(train_structural_dataset),
             ),
             "dataset": train_structural_dataset,
             "probability": 1.0,
@@ -182,7 +191,9 @@ train_sampler = DistributedMixedSampler(
 )
 
 train_fallback_sampler = WeightedRandomSampler(
-    train_weights, len(train_structural_dataset)
+    # torch types weights as Sequence[float]; a Tensor is accepted at runtime.
+    train_weights,  # type: ignore[arg-type]
+    len(train_structural_dataset),
 )
 
 train_dataset_with_fallback, train_sampler_with_fallback = (
@@ -234,7 +245,7 @@ val_weights = calculate_weights_for_pdb_dataset_df(
 val_sampler = DistributedMixedSampler(
     datasets_info=[
         {
-            "sampler": WeightedRandomSampler(val_weights, len(val_structural_dataset)),
+            "sampler": WeightedRandomSampler(val_weights, len(val_structural_dataset)),  # type: ignore[arg-type]
             "dataset": val_structural_dataset,
             "probability": 1.0,
         }
@@ -320,16 +331,10 @@ trainer.construct_optimizer()
 trainer.construct_scheduler()
 
 
-class CkptConfig:
-    def __init__(self, path, weight_loading_config=None, reset_optimizer=False):
-        self.path = path
-        self.weight_loading_config = weight_loading_config
-        self.reset_optimizer = reset_optimizer
-
-
 ckpt_dir = output_dir / "ckpt"
+ckpt_config: CheckpointConfig | None
 if ckpt_dir.exists():
-    ckpt_config = CkptConfig(
+    ckpt_config = CheckpointConfig(
         path=ckpt_dir, weight_loading_config=None, reset_optimizer=False
     )
 else:

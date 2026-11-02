@@ -31,6 +31,7 @@ from atomworks.ml.utils.token import (
     get_token_starts,
 )
 from biotite.structure import AtomArray
+from rfd3na._core.common import exists
 from rfd3na.constants import (
     OPTIONAL_CONDITIONING_VALUES,
     REQUIRED_CONDITIONING_ANNOTATIONS,
@@ -39,8 +40,6 @@ from rfd3na.transforms.conditioning_utils import random_condition
 from rfd3na.transforms.util_transforms import (
     add_representative_atom,
 )
-
-from foundry.common import exists
 
 nx.from_numpy_matrix = nx.from_numpy_array
 logger = logging.getLogger(__name__)
@@ -72,7 +71,7 @@ def set_default_conditioning_annotations(
     unindexed=False,
     mask=None,
     dtype=bool,
-    additional: set | list = None,
+    additional: set | list | None = None,
 ):
     """
     Adds default annotations to the atom array
@@ -302,7 +301,7 @@ class SampleConditioningType(Transform):
 
 class SampleConditioningFlags(Transform):
     requires_previous_transforms = [
-        "FlagAndReassignCovalentModifications",
+        "AnnotateCovalentModifications",
         "AssignTypes",
         "SampleConditioningType",
     ]  # We use is_protein in the PPI training condition

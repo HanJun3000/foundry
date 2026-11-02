@@ -13,15 +13,18 @@ This document outlines the various input settings and configurations you can use
 - [CLI arguments](#cli-arguments)
   - [Required CLI Arguments](#required-cli-arguments)
   - [Other Useful CLI Arguments](#other-useful-cli-arguments)
-  - [Other CLI options](#other-CLI-options)
+  - [Inference execution options](#inference-execution-options)
+  - [Other CLI options](#other-cli-options)
 - [InputSpecification fields](#inputspecification-fields)
 - [The `InputSelection` mini-language](#the-inputselection-mini-language)
 - [Contig Strings](#contig-strings)
 - [Input Option Specifics](#input-option-specifics)
+  - [Cyclic peptides](#cyclic-peptides)
   - [Unindexing Specifics](#unindexing-specifics)
   - [Partial Diffusion](#partial-diffusion)
   - [CIF Parser Options](#cif-parser-options)
   - [Select Fixed Atoms](#select-fixed-atoms)
+  - [Ligand Chain Assignment](#ligand-chain-assignment)
 - [Debugging recommendations](#debugging-recommendations)
 - [FAQ / Gotchas](#faq--gotchas)
 
@@ -62,6 +65,7 @@ rfd3 design out_dir=<path/to/outdir> inputs=<path/to/inputs>
 (other-useful-cli-arguments)=
 ### Other Useful CLI arguments:
 (From the [default config](https://github.com/RosettaCommons/foundry/blob/production/models/rfd3/configs/inference_engine/rfdiffusion3.yaml))
+- `inference_mode` — `fast` (default) enables corrected pooling and acceleration; `legacy` restores serial eager execution, native kernels and original pooling. Legacy overrides acceleration settings but keeps AtomWorks 3 preprocessing; it does not guarantee historical coordinates. See [Inference execution options](#inference-execution-options).
 - `n_batches` — number of batches to generate per input key (default: 1). 
 - `diffusion_batch_size` — number of diffusion samples (designs) per batch (default: 8). If `n_batches=1` and `diffusion_batch_size=8` then 8 designs will be generated from the inference run. 
 - `specification` — JSON overrides for the per-example InputSpecification (default: `{}`). For example, you can run `rfd3 design inputs=null specification.length=200` for a quick debug of creating a 200-length protein.
@@ -73,7 +77,45 @@ rfd3 design out_dir=<path/to/outdir> inputs=<path/to/inputs>
 - `global_prefix` — This setting allows you to change the beginning of the name of the output files from the name of the input JSON or YAML file to your own string (default: null).
 - `dump_trajectories` — If True, the trajectory files are also saved to the specified output directory (default: False).
 - `prevalidate_inputs` — Check that your inputs (JSON or YAML file) are valid before running inference (default: False).
-- `low_memory_mode` - Set to True (default: False) for memory efficient tokenization mode. 
+
+(inference-execution-options)=
+### Inference execution options
+
+These are top-level CLI arguments, not fields inside an input specification.
+Defaults below are for the `rfd3 design` CLI. `inference_mode=legacy` overrides
+compilation, kernels, CUDA graphs, workers and independent-example batching;
+`diffusion_batch_size` and sampler settings remain under your control.
+
+```bash
+rfd3 design inputs=designs.json out_dir=outputs/legacy inference_mode=legacy
+rfd3 design inputs=designs.json out_dir=outputs/fast inference_batch_size=2
+```
+
+| Argument | Default | Meaning |
+| --- | --- | --- |
+| `inference_mode` | `fast` | `fast` or `legacy`; see the compatibility notes above. |
+| `inference_batch_size` | `1` | Independent input examples per device; distinct from samples per input (`diffusion_batch_size`). Legacy forces `1`. |
+| `inference_num_workers` | `2` | CPU preprocessing workers for padded inference; `0` runs synchronously. Legacy forces `0`. |
+| `compile_model` | `true` | Compile the padded denoiser. The first new shape incurs compilation cost; legacy forces `false`. |
+| `compile_cuda_graphs` | `true` | Replay compiled CUDA denoiser graphs. Ignored without compilation or on non-CUDA devices; legacy forces `false`. |
+| `compile_shape_policy` | `buckets` | `buckets` reuses preset padding capacities; `batch_max` uses actual post-transform maximum sizes. |
+| `compile_atom_buckets` | Preset list in the default config | Atom-capacity ceilings for compiled `buckets` inference. |
+| `compile_token_buckets` | Preset list in the default config | Token-capacity ceilings for compiled `buckets` inference. |
+| `compile_slot_buckets` | Preset list in the default config | Atoms-per-token capacity ceilings for compiled `buckets` inference. |
+| `atom_padding_multiple` | `128` | Atom padding multiple; ignored by compiled `batch_max`. |
+| `token_padding_multiple` | `16` | Token padding multiple; ignored by compiled `batch_max`. |
+| `compile_cache_dir` | `RFD3_COMPILE_CACHE_DIR`, otherwise `null` | Optional persistent generated-code cache. A non-default `TORCHINDUCTOR_CACHE_DIR` takes precedence. |
+| `inference_kernel_backend` | `auto` | `auto`, `torch`, `triton` or `triton-transition`; automatic selection depends on device, compilation and batch size. Legacy forces `torch`. |
+| `dense_attention_backend` | `vanilla` | `auto`, `vanilla` or `sdpa`; controls dense token/pairformer attention. Legacy forces `vanilla`. |
+| `inference_cuda_graph` | `false` | Eager token/atom-stack graph replay; requires CUDA, `compile_model=false`, `inference_batch_size=1` and no low-memory mode. Legacy forces `false`. |
+
+Explicit Triton kernels also require CUDA and no low-memory mode. Incompatible
+settings fail rather than silently changing the requested execution mode.
+Use separate output directories when comparing modes: `skip_existing=true`
+otherwise reuses existing outputs. `dump_prediction_metadata_json=true` records
+resolved settings and the actual execution/random-stream path in output JSON.
+See {doc}`inference_acceleration` for automatic kernel selection, cache behavior
+and the limits of legacy reproducibility.
 
 (other-cli-options)=
 ### Other CLI Options:
@@ -125,7 +167,9 @@ Below is a table of all of the inputs that the `InputSpecification` accepts. Use
 | `contig`                                                       | `InputSelection`  | (Can only pass a contig string.) Indexed motif specification, e.g., `"A1-80,10,/0,B5-12"`.             |
 | `unindex`                                                      | `InputSelection`  | (Can only pass a contig string or dictionary.) Unindexed motif components, the specified residues can be anywhere in the final sequence. See [Unindexing Specifics](#unindexing-specifics) for more information. |
 | `length`                                                       | `str`             | Total design length constraint; `"min-max"` or int for specified length.                   |
+| `cyclic_chains` | `list[str]` or `null` | One assembled chain ID for N-to-C cyclic residue positional encoding, e.g. `["A"]`. Omitted, `null`, or `[]` keeps linear encoding. See [Cyclic peptides](#cyclic-peptides). |
 | `ligand`                                                       | `str`             | Ligand(s) by chemical component name (from [RSCB PDB](https://www.rcsb.org/)) or index. |
+| `allow_ligand_on_existing_chain`                                | `bool`            | Default `False`. If `True`, suppresses the error raised when a `ligand` shares a chain ID with a chain already present in the built structure (and permits multiple ligand residues to sit on the same chain). See [Ligand Chain Assignment](#ligand-chain-assignment) for more information. Use with caution — chain ID is leaked to the model, so collisions are a meaningful deviation from convention. |
 | `cif_parser_args`                                              | `dict`            | Optional args to CIF loader. See [CIF parser options](#cif-parser-options) for more information. |
 | `extra`                                                        | `dict`            | Extra metadata (e.g., logs). Current options include `sampled_contig`. |
 | `dialect`                                                      | `int`             | `2`=new (default), `1`=legacy, Learn more about the legacy parsing system by looking at [input_parsing.py](https://github.com/RosettaCommons/foundry/blob/production/models/rfd3/src/rfd3/inference/input_parsing.py).|
@@ -209,6 +253,23 @@ my_calculation:
 (input-option-specifics)=
 ## Input Option Specifics
 
+(cyclic-peptides)=
+### Cyclic peptides
+
+To design cyclic peptides, set `cyclic_chains` to **one design chain ID**, such as `["A"]`. The chain IDs are case-sensitive. This
+requests cyclic residue positional encoding for a complete de novo canonical
+peptide, as previously described by [Rettie et al (2025)](https://www.nature.com/articles/s41589-025-01929-w). Both macrocycle monomers and binders are supported. 
+
+As an example, if the `contig` string is `12,/0,E6-155`, the peptide is assembled as `A`
+and the target as `B`; so `["A"]` should be selected as the cyclic peptide chain ID. If the `contig` string were intead `E6-155,/0,12`, select `["B"]`.
+Hotspot selections continue to refer to input-file residue labels, such as `E64`.
+
+See the [macrocycle examples](examples/macrocycle_design.md) for monomer and binder inputs.
+
+Currently, the selected chain must consist entirely of generated canonical amino-acid
+residues. Motif-containing rings, multiple cyclic chains, partial diffusion, and
+active symmetry are not presently supported. 
+
 (unindexing-specifics)=
 ### Unindexing Specifics
 ```{note}
@@ -283,6 +344,13 @@ The `select_fixed_atoms` input setting can take a boolean, dictionary or contig 
 - `False`: All the atoms pulled from the input file are unfixed in 3D space
 - Contig string: See the [Contig Strings](#contig-strings) section for formatting. Specifying a contig string for this setting allows for the specification of several components to fix in 3D space. This string should only reference residues from the input. Chain breaks are irrelevant for this setting. 
 - Dictionary: Allows for the specification of specific atoms within the residue to be fixed in 3D space. For example, `{"A1": "N,CA,C,O,CB,CG", "A2-10": "BKBN"}` fixes backbone and CB for residues 1 and 2, and all atoms for residues 3-10 in chain A.
+
+(ligand-chain-assignment)=
+### Ligand Chain Assignment
+By default (`allow_ligand_on_existing_chain: false`), RFD3 validates the chain ID(s) assigned to any `ligand` you request against the chains already present in the built structure (i.e. those coming from `contig`/`unindex`/designed regions). This matters because chain ID is leaked to the model, so an unexpected chain collision is a meaningful deviation from convention and often indicates a misconfigured `ligand` or `contig` string. With the default behavior:
+- An error is raised if a requested ligand's chain ID overlaps with a chain ID already used in the built structure.
+- An error is raised if multiple ligand residues are placed on the same chain — each ligand residue must occupy its own chain.
+- Ligand `res_id` values are reset to start from `1` per chain, matching the convention used in AlphaFold3 output CIF files.
 
 (debugging-recommendations)=
 ## Debugging recommendations

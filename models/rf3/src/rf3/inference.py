@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 
-from foundry.utils.logging import suppress_warnings
+from rf3._core.utils.logging import suppress_warnings
 
 # Setup root dir and environment variables (more info: https://github.com/ashleve/rootutils)
 # NOTE: Sets the `PROJECT_ROOT` environment variable to the root directory of the project (where `.project-root` is located)
@@ -17,7 +17,8 @@ try:
 except Exception:
     pass
 
-load_dotenv(override=True)
+# Explicit runtime configuration takes precedence over repository defaults.
+load_dotenv(override=False)
 
 _config_path = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "configs"

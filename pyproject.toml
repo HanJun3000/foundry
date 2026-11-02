@@ -1,7 +1,7 @@
 [project]
 name = "rc-foundry"
-dynamic = ["version"]
-description = "Shared utilities and training infrastructure for biomolecular structure prediction models."
+version = "1.0.0"
+description = "Biomolecular design and prediction tools with model-owned training and inference infrastructure."
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
@@ -34,7 +34,9 @@ dependencies = [
     "beartype>=0.18.0",
     "typer>=0.20.0",
     # ... ml tools (core)
-    "torch>=2.2.0",
+    # RFD3's compiled inference uses the custom-op and Inductor APIs validated
+    # with this runtime; the old 2.2 lower bound cannot import the new operators.
+    "torch>=2.11.0",
     "lightning>=2.5.0",
     "loralib>=0.1.1",
     "einops>=0.8.0",
@@ -43,7 +45,7 @@ dependencies = [
     "dm-tree>=0.1.6",
     "zstandard",
     "pandas",
-    "atomworks[ml]>=2.1.1",
+    "atomworks[ml]>=3.0.1,<4",
     "ipykernel>=6.31.0",
     "assertpy",
     "toolz",
@@ -51,6 +53,11 @@ dependencies = [
 
 
 [project.optional-dependencies]
+rfo = [
+    "biopython>=1.83",
+    "pyyaml>=6.0",
+    "numpy>=1.26",
+]
 rfd3na = [
     "pydantic>=2.8",
 ]
@@ -63,11 +70,13 @@ rf3 = [
     "cuequivariance_torch>=0.6.1; sys_platform == 'linux'",
 ]
 all = [
+    "rc-foundry[rfo]",
     "rc-foundry[rfd3na]",
     "rc-foundry[rfd3]",
     "rc-foundry[rf3]",
 ]
 dev = [
+    "rc-foundry[rfo]",
     # Linters & formatters
     "assertpy",
     "ruff==0.8.3",
@@ -84,10 +93,11 @@ dev = [
     "pytest-dotenv>=0.5.2", # load environment variables from .env file
     "pytest-cov>=4.1.0", # generate coverage report
     "pytest-benchmark>=5.0.0", # benchmark tests for speed
-    "atomworks[ml,dev,openbabel]>=2.1.1",
+    "atomworks[ml,dev,openbabel]>=3.0.1,<4",
     "pre-commit"
 ]
 [project.scripts]
+rfo = "rfo.cli:main"
 rf3 = "rf3.cli:app"
 rfd3 = "rfd3.cli:app"
 rfd3na = "rfd3na.cli:app"
@@ -98,30 +108,20 @@ foundry = "foundry_cli.download_checkpoints:app"
 [build-system]
 requires = [
     "hatchling",
-    "hatch-vcs == 0.4",
 ]
 build-backend = "hatchling.build"
-
-[tool.hatch.version]
-source = "vcs"
-fallback-version = "0.0.0"
-local-scheme = "no-local-version"
-
-[tool.hatch.build.hooks.vcs]
-version-file = "src/foundry/version.py"
-tag-pattern = "^v(?P<version>.*)$"
 
 [tool.hatch.metadata]
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = [
-  "src/foundry",
   "src/foundry_cli",
   "models/rf3/src/rf3",
   "models/rfd3/src/rfd3",
   "models/rfd3na/src/rfd3na",
   "models/mpnn/src/mpnn",
+  "models/rfo/src/rfo",
 ]
 
 [tool.hatch.build.targets.wheel.force-include]
@@ -217,55 +217,69 @@ typeCheckingMode = "off"
 # Per-module strictness is ratcheted up via [tool.mypy.overrides] as annotations land.
 [tool.mypy]
 python_version = "3.12"
-files = ["src/foundry", "src/foundry_cli", "models/rfd3/src/rfd3", "models/rf3/src/rf3"]
+files = [
+    "src/foundry_cli",
+    "models/rfd3/src/rfd3",
+    "models/rf3/src/rf3",
+    "models/mpnn/src/mpnn",
+    "models/rfd3na/src/rfd3na",
+    "models/rfo/src/rfo/_core",
+]
 ignore_missing_imports = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 disallow_untyped_defs = false
 check_untyped_defs = false
 
-# rfd3 enablement ratchet. `models/rfd3` was brought into mypy's scope in 0010;
-# these modules had pre-existing type errors at that point and are exempted until
-# annotated. Fix the errors and remove the entry to enable type-checking for that
-# module (same playbook as the now-cleared src/foundry ratchet). Do NOT add modules.
+# Model-owned infrastructure retains strict type checking.
 [[tool.mypy.overrides]]
 module = [
-    # Held back: `process_input`/`normalize_inputs` have confused pre-existing logic
-    # (a `.split(",")` on a value that is already a list — dead but type-incorrect). See roadmap.
-    "rfd3.engine",
-    "rfd3.inference.legacy_input_parsing",
-    "rfd3.trainer.fabric_trainer",
-    # Held back: imports `rfd3.utils.inference._add_design_annotations_from_cif_block_metadata`,
-    # which does not exist (broken import — would ImportError on the .cif-load path). See roadmap.
-    "rfd3.utils.vizualize",
-]
-ignore_errors = true
-
-# NOTE: the rf3 enablement ratchet (0014) is fully cleared — there is no rf3 module-level
-# mypy exemption here, and every rf3 module type-checks with no in-file suppressions.
-
-# Per-module strictness (direction (b)). The global baseline above leaves
-# disallow_untyped_defs / check_untyped_defs off; the whole shared layer
-# (`src/foundry` + `src/foundry_cli`) now opts into strict checking, so any untyped
-# def in it fails the gate and new modules are strict by default. Scoped to these two
-# packages via wildcards rather than the global [tool.mypy] switch, because `files`
-# above also includes `models/rfd3`/`models/rf3`, which are not strict-ready (rfd3 still
-# carries an ignore_errors ratchet).
-[[tool.mypy.overrides]]
-module = [
-    "foundry.*",
+    "rf3._core.*",
+    "rfd3._core.*",
+    "rfd3na._core.*",
+    "rfo._core.*",
+    "rf3.checkpoints",
+    "rfd3.checkpoints",
+    "rfd3na.checkpoints",
     "foundry_cli.*",
+]
+disallow_untyped_defs = true
+check_untyped_defs = true
+
+# All MPNN modules use strict type checking.
+[[tool.mypy.overrides]]
+module = [
+    "mpnn.*",
+]
+disallow_untyped_defs = true
+check_untyped_defs = true
+
+# rfd3 direction (b), in progress: strict checking is opted into module-by-module as the
+# annotation fallout is cleared (same ratchet as mpnn 0088–0093). Modules not yet listed
+# stay at the lenient baseline. Collapse to `rfd3.*` once every module is covered.
+[[tool.mypy.overrides]]
+module = [
+    "rfd3.callbacks",
+    "rfd3.cli",
+    "rfd3.model.layers.chunked_pairwise",
+    "rfd3.trainer.rfd3",
+    "rfd3.utils.vizualize",
+    "rfd3.model.RFD3",
+    "rfd3.model.cfg_utils",
+    "rfd3.transforms.ncaa_transforms",
+    "rfd3.transforms.ppi_transforms",
+    "rfd3.utils.io",
 ]
 disallow_untyped_defs = true
 check_untyped_defs = true
 
 # Testing ----------------------------------------------------------------------------
 [tool.pytest.ini_options]
-# Shared-layer tests live in the top-level `tests/`; model-specific tests live in each
-# model's own `models/<MODEL>/tests/` (see AGENTS.PROJECT.md "Test Layout"). The pre-existing
+# Infrastructure regression tests live in `tests/`; tool tests live in
+# `models/<MODEL>/tests/`. The pre-existing
 # cluster-coupled per-model suites are kept out of the gate via `collect_ignore` in each
 # model's tests/conftest.py. Add a model's tests dir here once it has CPU-portable tests.
-testpaths = ["tests", "models/rf3/tests", "models/rfd3/tests"]
+testpaths = ["tests", "models/rf3/tests", "models/rfd3/tests", "models/mpnn/tests", "models/rfd3na/tests", "models/rfo/tests"]
 addopts = "-ra --strict-markers --strict-config"
 markers = [
     "gpu: requires CUDA or MPS GPU — skipped in CPU CI",
@@ -273,7 +287,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["src/foundry", "src/foundry_cli"]
+source = ["rf3", "rfd3", "rfd3na", "mpnn", "rfo", "foundry_cli"]
 branch = true
 
 [tool.coverage.report]

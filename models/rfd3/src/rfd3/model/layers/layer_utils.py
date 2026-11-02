@@ -4,10 +4,10 @@ from functools import partial
 import numpy as np
 import torch
 import torch.nn as nn
+from rfd3._core.training.checkpoint import activation_checkpointing
+from rfd3._core.utils.ddp import RankedLogger
+from rfd3.model import inference_acceleration as accel
 from torch.nn.functional import silu
-
-from foundry.training.checkpoint import activation_checkpointing
-from foundry.utils.ddp import RankedLogger
 
 ranked_logger = RankedLogger(__name__, rank_zero_only=True)
 try:
@@ -80,7 +80,11 @@ def collapse(x, L):
 class MultiDimLinear(nn.Linear):
     def __init__(self, in_features, out_shape, norm=False, **kwargs):
         self.out_shape = out_shape
-        out_features = np.prod(out_shape)
+        # int(): np.prod returns np.int64, which torch.compile cannot treat as a
+        # static shape. It gets lifted into the graph, so RMSNorm's
+        # normalized_shape becomes a data-dependent value and inductor fails the
+        # subgraph with `aten._local_scalar_dense` under dynamic=False.
+        out_features = int(np.prod(out_shape))
         super().__init__(in_features, out_features, **kwargs)
         if norm:
             self.ln = RMSNorm((out_features,))
@@ -125,6 +129,10 @@ class Transition(nn.Module):
         X,
     ):
         X = self.layer_norm_1(X)
+        if accel.enabled(self, X):
+            fused = accel.fused_transition(self, X)
+            if fused is not None:
+                return fused
         A = self.linear_1(X)
         B = self.linear_2(X)
         X = self.linear_3(silu(A) * B)

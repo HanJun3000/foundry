@@ -1,0 +1,16 @@
+input: /path/to/protein_binder_case.pdb
+checkpoint_path: /path/to/modelhub_af3_with_confidence_ep804.ckpt
+# checkpoint_path: "/path/to/weights_with_confidence_2025_01_06"
+output_path: ./outputs
+n_recycles: 10
+diffusion_batch_size: 1
+num_steps: 50
+load_ema_weights: true
+
+lr: 1e-1
+mutate_each: 10
+max_mut: 3
+opt_steps: 10
+loss: {}
+
+mutate_sample_step: 10

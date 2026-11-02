@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Lightweight source launcher; needs numpy, biopython and pyyaml.
+set -euo pipefail
+RFO_SRC="$(cd "$(dirname "$0")/src" && pwd)"
+exec env PYTHONPATH="$RFO_SRC:${PYTHONPATH:-}" "${RFO_PYTHON:-python}" -m rfo.cli "$@"

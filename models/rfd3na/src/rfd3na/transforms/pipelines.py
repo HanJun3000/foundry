@@ -41,7 +41,7 @@ from atomworks.ml.transforms.bfactor_conditioned_transforms import SetOccToZeroO
 from atomworks.ml.transforms.bonds import AddAF3TokenBondFeatures
 from atomworks.ml.transforms.cached_residue_data import LoadCachedResidueLevelData
 from atomworks.ml.transforms.covalent_modifications import (
-    FlagAndReassignCovalentModifications,
+    AnnotateCovalentModifications,
 )
 from atomworks.ml.transforms.crop import CropContiguousLikeAF3, CropSpatialLikeAF3
 from atomworks.ml.transforms.diffusion.batch_structures import (
@@ -104,8 +104,6 @@ from rfd3na.transforms.util_transforms import (
     RemoveTokensWithoutCorrespondingCentralAtom,
 )
 from rfd3na.transforms.virtual_atoms import PadTokensWithVirtualAtoms
-
-from foundry.common import exists
 
 ######################################################################################
 # Common transforms
@@ -170,12 +168,14 @@ def get_pre_crop_transforms(
         TrainingRoute(
             RemoveTokensWithoutCorrespondingCentralAtom(central_atom=central_atom),
         ),
-        FlagAndReassignCovalentModifications(),
+        AnnotateCovalentModifications(
+            p_reassign_modified_residue=1.0, atomize_backbone_modifications=True
+        ),
         FlagNonPolymersForAtomization(),
         AddGlobalAtomIdAnnotation(),
         AtomizeByCCDName(
             atomize_by_default=True,
-            res_names_to_ignore=STANDARD_AA + STANDARD_RNA + STANDARD_DNA,
+            res_names_to_ignore=list(STANDARD_AA + STANDARD_RNA + STANDARD_DNA),
             move_atomized_part_to_end=False,
             validate_atomize=False,
         ),
@@ -342,7 +342,7 @@ def build_atom14_base_pipeline_(
     ground_truth_conformer_policy: str,
     provide_elements_for_unindexed_components: bool,
     use_element_for_atom_names_of_atomized_tokens: bool,
-    residue_cache_dir: bool,
+    residue_cache_dir: str | Path | None,
     # Conditioning
     train_conditions: dict,
     meta_conditioning_probabilities: dict,
@@ -415,7 +415,8 @@ def build_atom14_base_pipeline_(
         max_binder_length=max_binder_length,
         max_atoms_in_crop=max_atoms_in_crop,
         allowed_types=allowed_types,
-        association_scheme=association_scheme,
+        # association_scheme is required in practice (this builder always receives one).
+        association_scheme=association_scheme,  # type: ignore[arg-type]
     )
 
     if zero_occ_on_exposure_after_cropping:
@@ -461,7 +462,9 @@ def build_atom14_base_pipeline_(
     # Design Transforms
     transforms += [
         LoadCachedResidueLevelData(
-            dir=Path(residue_cache_dir) if exists(residue_cache_dir) else None,
+            dir=Path(residue_cache_dir)  # type: ignore[arg-type]
+            if residue_cache_dir is not None
+            else None,
             sharding_depth=1,
         ),
         # ... Fuse inference and training conditioning assignments

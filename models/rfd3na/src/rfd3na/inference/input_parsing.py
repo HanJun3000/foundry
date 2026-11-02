@@ -2,6 +2,7 @@ import copy
 import json
 import logging
 import os
+import re
 import time
 import warnings
 from contextlib import contextmanager
@@ -10,6 +11,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 from atomworks.constants import STANDARD_AA, STANDARD_DNA, STANDARD_RNA
+from atomworks.io.config import PrepareConfig
 from atomworks.io.parser import parse_atom_array
 
 # from atomworks.ml.datasets.datasets import BaseDataset
@@ -25,8 +27,14 @@ from pydantic import (
     Field,
     model_validator,
 )
+from rfd3na._core.common import exists
+from rfd3na._core.utils.components import (
+    fetch_mask_from_idx,
+    get_design_pattern_with_constraints,
+    get_motif_components_and_breaks,
+)
+from rfd3na._core.utils.ddp import RankedLogger
 from rfd3na.constants import (
-    INFERENCE_ANNOTATIONS,
     OPTIONAL_CONDITIONING_VALUES,
     REQUIRED_CONDITIONING_ANNOTATION_VALUES,
     REQUIRED_INFERENCE_ANNOTATIONS,
@@ -34,6 +42,7 @@ from rfd3na.constants import (
     backbone_atoms_RNA,
 )
 from rfd3na.inference.legacy_input_parsing import (
+    _check_has_backbone_connections_to_nonstandard_residues,
     create_atom_array_from_design_specification_legacy,
     reorder_atoms_per_residue,
 )
@@ -52,19 +61,14 @@ from rfd3na.transforms.conditioning_base import (
 from rfd3na.transforms.util_transforms import assign_types_
 from rfd3na.utils.inference import (
     _restore_bonds_for_nonstandard_residues,
+    create_cb_atoms,
+    create_o_atoms,
     extract_ligand_array,
     inference_load_,
     set_com,
     set_common_annotations,
     set_indices,
 )
-
-from foundry.common import exists
-from foundry.utils.components import (
-    get_design_pattern_with_constraints,
-    get_motif_components_and_breaks,
-)
-from foundry.utils.ddp import RankedLogger
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -315,6 +319,22 @@ class DesignInputSpecification(BaseModel):
             if not exists(data.get("input")) and not exists(
                 data.get("atom_array_input")
             ):
+                # Generated segments need no motif atoms, including RNA/DNA
+                # suffixes and explicit chain breaks. Input-backed selections
+                # must still fail when no input structure was supplied.
+                if selections == ["contig"] and isinstance(data["contig"], str):
+                    parts = [part.strip() for part in data["contig"].split(",")]
+                    if any(part != "/0" for part in parts) and all(
+                        re.fullmatch(r"(?:[0-9]+(?:-[0-9]+)?[RD]?|/0)", part)
+                        for part in parts
+                    ):
+                        data["contig"] = InputSelection(
+                            raw=",".join(parts),
+                            data={},
+                            mask=np.zeros(0, dtype=bool),
+                            tokens={},
+                        )
+                        return data
                 if selections:
                     raise ValueError(
                         "Atom array input must be provided before parsing selections: {}".format(
@@ -867,12 +887,15 @@ def prepare_pipeline_input_from_atom_array(  # see atomworks.ml.datasets.parsers
     # Temporary spoof of chain IDs to ensure duplicates aren't dropped:
     result_dict = parse_atom_array(
         atom_array_orig,
-        remove_ccds=[],
-        fix_arginines=False,
-        add_missing_atoms=False,
-        extra_fields=INFERENCE_ANNOTATIONS,
-        build_assembly=None,
-        hydrogen_policy="remove",
+        config=PrepareConfig(
+            remove_ccds=(),
+            fix_arginines=False,
+            add_missing_atoms=False,
+            hydrogen_policy="remove",
+            # These are synthetic/partially diffused coordinates, not geometry
+            # from which authored motif bonds can be judged.
+            long_bond_policy="keep",
+        ),
     )
     atom_array = result_dict["asym_unit"][0]
 
@@ -925,7 +948,7 @@ def create_atom_array_from_design_specification(
 
 
 @contextmanager
-def validator_context(validator_name: str, data: dict = None):
+def validator_context(validator_name: str, data: dict | None = None):
     """Context manager for validator execution with logging."""
     logger.debug(f"Starting validator: {validator_name}")
     try:
@@ -1003,7 +1026,8 @@ def create_motif_residue(
         diffuse_oxygen = False
         if n_atoms < 3:
             raise ValueError(
-                f"Not enough data for {src_chain}{src_resid} in input atom array."
+                f"Not enough data for {token.chain_id[0]}{token.res_id[0]} "
+                "in input atom array."
             )
         if n_atoms == 3:
             # Handle cases with N, CA, C only;
@@ -1037,7 +1061,7 @@ def create_motif_residue(
 
 
 def accumulate_components(
-    components_to_accumulate: List[Union[str, int]],
+    components_to_accumulate: List[str],
     *,
     # Tokens from input
     indexed_tokens: Dict[str, AtomArray],
@@ -1046,7 +1070,7 @@ def accumulate_components(
     atom_array_accum=[],
     start_chain: str = "A",
     start_resid: int = 1,
-    unindexed_breaks: Optional[List[bool]] = [],
+    unindexed_breaks: Optional[List[bool | None]] = [],
     src_atom_array: Optional[AtomArray] = None,
     strip_sidechains_by_default: bool = False,
     **kwargs,
@@ -1060,12 +1084,9 @@ def accumulate_components(
         x, y
     )
     all_tokens = indexed_tokens | unindexed_tokens
-    all_annots = []
-    [
-        all_annots.extend(list(tok.get_annotation_categories()))
-        for tok in all_tokens.values()
-    ]
-    all_annots = set(all_annots)
+    all_annots: set = set()
+    for tok in all_tokens.values():
+        all_annots.update(tok.get_annotation_categories())
     atom_array_accum = [] if atom_array_accum is None else atom_array_accum
     unindexed_breaks = (
         [None] * len(components_to_accumulate)
@@ -1138,7 +1159,7 @@ def accumulate_components(
                 n = int(component[:-1])
             else:
                 polymer_type = "P"
-                n = int(components)
+                n = int(component)
 
             # ... Skip if none or unindexed
             if n == 0 or unindexed_components_started:
@@ -1220,7 +1241,7 @@ def accumulate_components(
     return atom_array_accum
 
 
-def ensure_input_is_abspath(args: Dict[str, Any], path: PathLike | None):
+def ensure_input_is_abspath(args: Dict[str, Any], path: str | PathLike | None):
     """
     Ensures the input source is an absolute path if exists, if not it will convert
 

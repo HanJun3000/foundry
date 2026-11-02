@@ -1,0 +1,55 @@
+input: /path/to/protein_binder_case.pdb
+checkpoint_path: "/path/to/weights_with_confidence_2025_01_06"
+output_path: './outputs/'
+self_template: False
+n_recycles: 1
+n_cycles: 3
+lr : 1e-1
+max_mut: 5
+opt_steps:
+  logits: 
+    total_steps: 10
+    temp: 1
+  soft:
+    total_steps: 5
+    temp_start: 1
+    temp_end: 0.01
+  hard:
+    total_steps: 10
+    temp_start: 1
+    temp_end: 0.01
+  semigreedy:
+    total_steps: 1
+    try_each: 3
+    random_mut: True
+    force_mutate: False
+
+loss :
+  plddt_chainA_constrain : 
+    _target_: rfo.backprop.tools.loss.pLDDT_chain
+    "chainID" : "A_1"
+    "min" : "0.7"
+    "max" : "1"
+    weight : 1
+
+  plddt_chainB_constrain : 
+    _target_: rfo.backprop.tools.loss.pLDDT_chain
+    "chainID" : "B_1"
+    "min" : 0.8
+    "max" : 1
+    weight : 1
+  
+  plddt_catres_motif :
+    _target_: rfo.backprop.tools.loss.pLDDT_motif
+    "atom" : "0:MET:2:CA"
+    "min" : 0.9
+    "max" : 1
+    "weight" : 1
+
+  distance :
+    _target_: rfo.backprop.tools.loss.Distance
+    "atom_1" : "0:MET:1:CA" #entityID:resn:resi_idx1:atomName
+    "atom_2" : "0:ALA:3:CA"
+    "min" : 5
+    "max" : 10
+    weight : 1

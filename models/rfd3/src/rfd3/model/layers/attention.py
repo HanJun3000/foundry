@@ -1,4 +1,5 @@
 import math
+import os
 from math import sqrt
 
 import torch
@@ -6,6 +7,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
 from opt_einsum import contract as einsum
+from rfd3._core.common import exists
+from rfd3._core.model.layers.attention import (
+    dense_pair_attention,
+    use_dense_sdpa,
+    validate_attention_backend,
+)
+from rfd3._core.training.checkpoint import activation_checkpointing
+from rfd3._core.utils.ddp import RankedLogger
+from rfd3.model import inference_acceleration as accel
 from rfd3.model.layers.block_utils import (
     create_attention_indices,
     indices_to_mask,
@@ -16,10 +26,6 @@ from rfd3.model.layers.layer_utils import (
     RMSNorm,
     linearNoBias,
 )
-
-from foundry.common import exists
-from foundry.training.checkpoint import activation_checkpointing
-from foundry.utils.ddp import RankedLogger
 
 ranked_logger = RankedLogger(__name__, rank_zero_only=True)
 
@@ -195,8 +201,12 @@ class LocalAttentionPairBias(nn.Module):
         kq_norm=True,
         n_attn_seq_neighbours=2,
         n_attn_keys=128,
+        dense_attention_backend="vanilla",
     ):
         super().__init__()
+        self.dense_attention_backend = validate_attention_backend(
+            dense_attention_backend
+        )
         self.c = c_a  # d_model dim same as input features
         self.n_head = n_head
 
@@ -335,18 +345,66 @@ class LocalAttentionPairBias(nn.Module):
                     )  # [D, L, c]
                 else:
                     # Original full P_LL path
-                    b = self.to_b(P_LL)
-                    attn_out = sparse_pairbias_attention(
-                        Q=q,
-                        K=k,
-                        V=v,
-                        B=b,
-                        G=g,
-                        gather_bias=True,
-                        indices=indices,
-                        H=self.n_head,
-                        full=full,
-                    )  # [D, L, c]
+                    b = (
+                        accel.cached_projection(self.to_b, P_LL)
+                        if accel.is_constant(P_LL)
+                        else self.to_b(P_LL)
+                    )
+                    if (
+                        not full
+                        and accel.enabled(self, q)
+                        and v.dtype == torch.bfloat16
+                        and self.c // self.n_head == 32
+                    ):
+                        attn_out = accel.gather_attention(
+                            q, k, v, b, indices, self.n_head, g
+                        )
+                    elif full and use_dense_sdpa(self, q):
+                        qh, kh, vh = [
+                            x.unflatten(-1, (self.n_head, -1)).transpose(-3, -2)
+                            for x in (q, k, v)
+                        ]
+                        attn_out = (
+                            dense_pair_attention(
+                                qh,
+                                kh,
+                                vh,
+                                b.movedim(-1, -3),
+                                scale=(self.c // self.n_head) ** -0.5,
+                                allowed=indices_to_mask(indices).unsqueeze(-3),
+                            )
+                            .transpose(-3, -2)
+                            .flatten(-2)
+                            * g
+                        )
+                    elif use_dense_sdpa_pairbias(
+                        Q=q, indices=indices, full=full, H=self.n_head
+                    ):
+                        # Mathematically equivalent to the sparse path below, but avoids
+                        # materializing the (D, L, k, c) gathered K/V tensors. See the
+                        # function docstring for when this is (and isn't) the faster
+                        # choice.
+                        attn_out = dense_sdpa_pairbias_attention(
+                            Q=q,
+                            K=k,
+                            V=v,
+                            B=b,
+                            G=g,
+                            indices=indices,
+                            H=self.n_head,
+                        )  # [D, L, c]
+                    else:
+                        attn_out = sparse_pairbias_attention(
+                            Q=q,
+                            K=k,
+                            V=v,
+                            B=b,
+                            G=g,
+                            gather_bias=True,
+                            indices=indices,
+                            H=self.n_head,
+                            full=full,
+                        )  # [D, L, c]
 
             # Output projection (from adaLN-Zero)
             Q_L = self.to_o(attn_out)
@@ -371,6 +429,121 @@ class LocalAttentionPairBias(nn.Module):
 ######################################################################################
 ##########################        Kernel Functions          ##########################
 ######################################################################################
+
+
+_DENSE_PATH_REPORTED = False
+
+
+def _report_attention_path(chosen: str, reason: str, shape: str) -> None:
+    """Log the attention path once per process so it is visible in run logs."""
+    global _DENSE_PATH_REPORTED
+    if _DENSE_PATH_REPORTED:
+        return
+    _DENSE_PATH_REPORTED = True
+    ranked_logger.info(
+        f"Atom attention path: {chosen} ({reason}) [{shape}]. "
+        "Set RFD3_DENSE_SDPA_ATTENTION=0 to force the original sparse path."
+    )
+
+
+def use_dense_sdpa_pairbias(Q, indices, full, H) -> bool:
+    """Decide whether to run the dense-SDPA path instead of the sparse gather path.
+
+    Only used at inference (the sparse path is kept for training, where its activation
+    memory scales as O(L * k) rather than O(L^2) and matters for the backward pass).
+
+    Set `RFD3_DENSE_SDPA_ATTENTION=0` to force the original sparse path.
+    """
+    D, L, _ = Q.shape
+    k = indices.shape[-1]
+    shape = f"D={D} L={L} k={k} H={H}"
+
+    if full:
+        _report_attention_path("SPARSE", "full=True", shape)
+        return False
+    if torch.is_grad_enabled():
+        _report_attention_path("SPARSE", "grad enabled (training)", shape)
+        return False
+    if os.environ.get("RFD3_DENSE_SDPA_ATTENTION", "1") != "1":
+        _report_attention_path("SPARSE", "disabled via env var", shape)
+        return False
+    if os.environ.get("RFD3_LOW_MEMORY_MODE", "0") == "1":
+        _report_attention_path("SPARSE", "low memory mode", shape)
+        return False
+    if not Q.is_cuda:
+        _report_attention_path("SPARSE", "not on CUDA", shape)
+        return False
+    # The dense path is only a win while the L x L attention/bias tensors stay small
+    # relative to the O(L * k) gathers it replaces, and while they fit comfortably in
+    # VRAM. Two (D, H, L, L) bf16 tensors are live at peak (bias + attention scores).
+    if L <= k:
+        _report_attention_path("SPARSE", f"L={L} <= k={k}", shape)
+        return False
+    free_bytes, _ = torch.cuda.mem_get_info(Q.device)
+    # Peak extra allocation is the (D, H, L, L) bf16 bias plus one transient of the same
+    # size from the masked_fill; SDPA itself streams the scores rather than storing them.
+    dense_bytes = 2 * D * H * L * L * 2
+    if dense_bytes >= 0.35 * free_bytes:
+        _report_attention_path(
+            "SPARSE",
+            f"needs {dense_bytes / 2**30:.1f} GiB of {free_bytes / 2**30:.1f} GiB free",
+            shape,
+        )
+        return False
+    _report_attention_path("DENSE-SDPA", f"{dense_bytes / 2**30:.1f} GiB bias", shape)
+    return True
+
+
+def dense_sdpa_pairbias_attention(Q, K, V, B, indices, H, G=None):
+    """Pair-bias attention over the same key set as `sparse_pairbias_attention`.
+
+    Rather than gathering K/V into (D, L, k, c), this builds the (D, H, L, L) additive
+    bias, sets non-selected keys to -inf, and defers to `scaled_dot_product_attention`.
+    The softmax gives zero weight to the masked keys, so the result matches the sparse
+    path up to floating-point summation order.
+
+    Q, K, V: (D, L, c) | B: (L, L, H) or (D, L, L, H) | G: (D, L, c) | indices: (D, L, k)
+    Returns (D, L, c).
+    """
+    D, L, c = Q.shape
+    d = c // H
+
+    # q/k are promoted to fp32 by the (auto-cast-excluded) kq RMSNorms; SDPA needs a
+    # single dtype for q/k/v, so settle on the value/bias dtype (bf16 under AMP).
+    dtype = V.dtype
+    q = Q.to(dtype).reshape(D, L, H, d).transpose(1, 2)  # (D, H, L, d)
+    k = K.to(dtype).reshape(D, L, H, d).transpose(1, 2)
+    v = V.reshape(D, L, H, d).transpose(1, 2)
+
+    # Additive pair bias -> (D, H, L, L)
+    if B.ndim == 3:  # (L, L, H), shared across the diffusion batch
+        bias = B.permute(2, 0, 1).unsqueeze(0).expand(D, -1, -1, -1)
+    elif B.ndim == 4:  # (D, L, L, H)
+        bias = B.permute(0, 3, 1, 2)
+    else:
+        raise ValueError(f"Unexpected pair-bias shape {tuple(B.shape)}")
+
+    # Mask out every key that the sparse path would not have gathered. The sparse path
+    # broadcasts indices over the batch via advanced indexing; scatter_ does not, so a
+    # shared (1, L, k) index set has to be expanded explicitly or batches 1.. would end
+    # up fully masked (-inf everywhere -> NaN out of the softmax).
+    indices = indices.to(torch.int64)
+    if indices.shape[0] != D:
+        if indices.shape[0] != 1:
+            raise ValueError(
+                f"indices batch dim {indices.shape[0]} is neither 1 nor {D}"
+            )
+        indices = indices.expand(D, -1, -1)
+    valid = torch.zeros((D, L, L), dtype=torch.bool, device=Q.device)
+    valid.scatter_(2, indices, True)
+    bias = bias.to(dtype).masked_fill(~valid.unsqueeze(1), float("-inf"))
+
+    attn_out = F.scaled_dot_product_attention(q, k, v, attn_mask=bias)  # (D, H, L, d)
+
+    if G is not None:
+        attn_out = attn_out * G.reshape(D, L, H, d).transpose(1, 2)
+
+    return attn_out.transpose(1, 2).reshape(D, L, c).contiguous()
 
 
 def sparse_pairbias_attention(

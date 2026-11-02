@@ -12,6 +12,8 @@ import yaml
 from atomworks.ml.datasets import MolecularDataset
 from atomworks.ml.transforms.base import Compose, Transform
 from omegaconf import DictConfig, OmegaConf
+from rfd3na._core.utils.datasets import assemble_distributed_loader
+from rfd3na._core.utils.ddp import RankedLogger
 from rfd3na.inference.input_parsing import (
     DesignInputSpecification,
     ensure_input_is_abspath,
@@ -20,9 +22,6 @@ from torch.utils.data import (
     DataLoader,
     SequentialSampler,
 )
-
-from foundry.utils.datasets import assemble_distributed_loader
-from foundry.utils.ddp import RankedLogger
 
 logger = RankedLogger(__name__, rank_zero_only=True)
 all_ranks_logger = RankedLogger(__name__, rank_zero_only=False)
@@ -55,7 +54,7 @@ class ContigJsonDataset(MolecularDataset):
         """
 
         if isinstance(data, (PathLike, str)):
-            self.json_path = data
+            self.json_path: PathLike | None = data
             original_data = self._load_from_path(data)
         elif isinstance(data, DictConfig):
             self.json_path = None
@@ -168,6 +167,7 @@ class ContigJsonDataset(MolecularDataset):
         data = spec.to_pipeline_input(example_id=example_id)
 
         # Apply transforms and return
+        assert self.transform is not None
         data = self.transform(data)
         return data
 

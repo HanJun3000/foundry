@@ -3,14 +3,13 @@ import os
 import hydra
 import torch
 from omegaconf import DictConfig
+from rfd3na._core.utils.ddp import RankedLogger
 from rfd3na.model.cfg_utils import (
     strip_f,
 )
 from rfd3na.model.inference_sampler import ConditionalDiffusionSampler
 from rfd3na.model.layers.encoders import TokenInitializer
 from torch import nn
-
-from foundry.utils.ddp import RankedLogger
 
 ranked_logger = RankedLogger(__name__, rank_zero_only=True)
 
@@ -50,7 +49,8 @@ class RFD3(nn.Module):
             c_atom=c_atom,
             c_atompair=c_atompair,
             use_chunked_pll=use_chunked_pll,
-            **token_initializer,
+            # DictConfig is a runtime Mapping but mypy won't **-unpack it.
+            **token_initializer,  # type: ignore[arg-type]
         )
 
         # Diffusion module instantiated to allow for config scripting
@@ -65,12 +65,12 @@ class RFD3(nn.Module):
         self.cfg_features = inference_sampler.pop("cfg_features", [])
 
         # ... initialize the inference sampler, which performs a full diffusion rollout during inference
-        self.inference_sampler = ConditionalDiffusionSampler(**inference_sampler)
+        self.inference_sampler = ConditionalDiffusionSampler(**inference_sampler)  # type: ignore[arg-type]
 
     def forward(
         self,
         input: dict,
-        coord_atom_lvl_to_be_noised: torch.Tensor = None,
+        coord_atom_lvl_to_be_noised: torch.Tensor | None = None,
         n_cycle=None,
         **_,
     ) -> dict:
@@ -86,6 +86,8 @@ class RFD3(nn.Module):
                 **initializer_outputs,
             )  # [D, L, 3]
         else:
+            # Inference always supplies the coords to noise.
+            assert coord_atom_lvl_to_be_noised is not None
             if self.use_classifier_free_guidance:
                 f_ref = strip_f(input["f"], self.cfg_features)
                 ref_initializer_outputs = self.token_initializer(f_ref)

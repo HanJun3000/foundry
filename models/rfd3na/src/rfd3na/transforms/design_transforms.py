@@ -33,6 +33,7 @@ from atomworks.ml.utils.token import (
     get_token_starts,
 )
 from biotite.structure import AtomArray
+from rfd3na._core.utils.ddp import RankedLogger  # noqa
 from rfd3na.constants import VIRTUAL_ATOM_ELEMENT_NAME
 from rfd3na.transforms.conditioning_base import (
     UnindexFlaggedTokens,
@@ -46,8 +47,6 @@ from rfd3na.transforms.util_transforms import (
     get_af3_token_representative_masks,
 )
 from rfd3na.transforms.virtual_atoms import PadTokensWithVirtualAtoms
-
-from foundry.utils.ddp import RankedLogger  # noqa
 
 #####################################################################################################
 # Other design transforms
@@ -66,7 +65,7 @@ class SubsampleToTypes(Transform):
         - is_rna
     """
 
-    requires_previous_transforms = [AssignTypes]
+    requires_previous_transforms = [AssignTypes]  # type: ignore[list-item]
 
     def __init__(
         self,
@@ -128,7 +127,7 @@ class CreateDesignReferenceFeatures(Transform):
     Reduces time to process from ~0.5 to ~0.1 s on avg.
     """
 
-    requires_previous_transforms = [UnindexFlaggedTokens, AssignTypes]
+    requires_previous_transforms = [UnindexFlaggedTokens, AssignTypes]  # type: ignore[list-item]
 
     def __init__(
         self,
@@ -416,8 +415,8 @@ class AddIsXFeats(Transform):
     """
 
     requires_previous_transforms = [
-        AssignTypes,
-        PadTokensWithVirtualAtoms,
+        AssignTypes,  # type: ignore[list-item]
+        PadTokensWithVirtualAtoms,  # type: ignore[list-item]
         "UnindexFlaggedTokens",
     ]
 

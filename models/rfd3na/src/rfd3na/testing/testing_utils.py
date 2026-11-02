@@ -6,6 +6,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import hydra
@@ -26,6 +27,7 @@ from atomworks.io.parser import STANDARD_PARSER_ARGS
 from atomworks.io.utils.io_utils import to_cif_file
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import OmegaConf
+from rfd3na._core.hydra.resolvers import register_resolvers
 from rfd3na.inference.input_parsing import (
     DesignInputSpecification,
     create_atom_array_from_design_specification,
@@ -33,8 +35,6 @@ from rfd3na.inference.input_parsing import (
 from rfd3na.transforms.pipelines import (
     build_atom14_base_pipeline,
 )
-
-from foundry.hydra.resolvers import register_resolvers
 
 register_resolvers()
 
@@ -206,7 +206,7 @@ def build_pipelines(
     standardize_crop_size: bool = True,
     **transform_kwargs,
 ):
-    pipes = {}
+    pipes: dict[bool, Any] = {}
     for is_validation in [True, False]:
         if composed_config is None:
             config = load_train_or_val_cfg(name=cfg_name, is_val_cfg=is_validation)
@@ -248,7 +248,7 @@ def build_pipelines(
 def get_train_dataloader(cfg_name="pretrain", seed=42):
     print("This function is deprecated!")
     cfg = load_train_or_val_cfg(name=cfg_name, is_val_cfg=False)
-    from foundry.utils.datasets import (
+    from rfd3na._core.utils.datasets import (
         assemble_distributed_loader,
         recursively_instantiate_datasets_and_samplers,
     )

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "test_complex",
+    "sequences": [
+      {"protein": {"id": "A", "sequence": "GEELKKLEEEIKKLGS"}},
+      {"protein": {"id": "B", "sequence": "MTYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE"}}
+    ]
+  }
+]

@@ -1,16 +1,17 @@
 import os
+from typing import Any
 
 import hydra
 import torch
 from omegaconf import DictConfig
+from rfd3._core.utils.ddp import RankedLogger
+from rfd3.model import inference_acceleration as accel
 from rfd3.model.cfg_utils import (
     strip_f,
 )
 from rfd3.model.inference_sampler import ConditionalDiffusionSampler
 from rfd3.model.layers.encoders import TokenInitializer
 from torch import nn
-
-from foundry.utils.ddp import RankedLogger
 
 ranked_logger = RankedLogger(__name__, rank_zero_only=True)
 
@@ -36,7 +37,7 @@ class RFD3(nn.Module):
         token_initializer: DictConfig | dict,
         diffusion_module: DictConfig | dict,
         inference_sampler: DictConfig | dict,
-        **_,
+        **_: Any,
     ):
         super().__init__()
         # Check for chunked P_LL mode via environment variable
@@ -74,9 +75,53 @@ class RFD3(nn.Module):
         self,
         input: dict,
         coord_atom_lvl_to_be_noised: torch.Tensor | None = None,
-        n_cycle=None,
-        **_,
+        n_cycle: int | None = None,
+        **_: Any,
     ) -> dict:
+        if input["f"]["atom_to_token_map"].ndim == 2:
+            if self.training or coord_atom_lvl_to_be_noised is None:
+                raise ValueError("Padded batching requires inference coordinates")
+            from rfd3.inference.batching import prepare_attention
+            from rfd3.model.batched_sampler import sample
+            from rfd3.model.layers.batched import initialize
+
+            sampler = self.inference_sampler.sampler
+            dm = self.diffusion_module
+
+            def prepare(f: dict) -> dict:
+                return prepare_attention(
+                    f,
+                    atom_keys=dm.n_attn_keys,
+                    atom_neighbors=dm.n_attn_seq_neighbours,
+                    token_keys=dm.diffusion_transformer.n_keys,
+                    token_neighbors=dm.diffusion_transformer.n_local_tokens,
+                )
+
+            f = prepare(input["f"])
+            init = initialize(self.token_initializer, f)
+            ref, ref_init = None, None
+            if self.use_classifier_free_guidance:
+                if input.get("f_ref") is None:
+                    raise ValueError(
+                        "Batched CFG requires schema-cropped reference features"
+                    )
+                ref = prepare(input["f_ref"])
+                ref_init = initialize(self.token_initializer, ref)
+            # Eager padded transitions can reuse their BF16 weights for this
+            # rollout. Compiled transitions pass weights directly into the graph
+            # and do not consult this Python cache.
+            with accel.rollout_cache(accel.enabled(dm, coord_atom_lvl_to_be_noised)):
+                return sample(
+                    sampler,
+                    dm,
+                    coord_atom_lvl_to_be_noised,
+                    f,
+                    init,
+                    f_ref=ref,
+                    ref_initializer=ref_init,
+                    noise_source=input.get("noise_source"),
+                    capture_trajectories=input.get("capture_trajectories", False),
+                )
         initializer_outputs = self.token_initializer(input["f"])
 
         if self.training:
@@ -98,13 +143,21 @@ class RFD3(nn.Module):
                 f_ref = None
                 ref_initializer_outputs = None
 
-            return self.inference_sampler.sample_diffusion_like_af3(
-                f=input["f"],
-                f_ref=f_ref,  # for cfg
-                diffusion_module=self.diffusion_module,
-                diffusion_batch_size=coord_atom_lvl_to_be_noised.shape[0],
-                coord_atom_lvl_to_be_noised=coord_atom_lvl_to_be_noised,
-                # Forwarded as **kwargs:
-                initializer_outputs=initializer_outputs,
-                ref_initializer_outputs=ref_initializer_outputs,  # for cfg
-            )
+            constants = [initializer_outputs.get("P_LL")]
+            if ref_initializer_outputs is not None:
+                constants.append(ref_initializer_outputs.get("P_LL"))
+            with accel.rollout_cache(
+                accel.enabled(self.diffusion_module, coord_atom_lvl_to_be_noised)
+                or getattr(self.diffusion_module, "inference_cuda_graph", False),
+                constants=constants,
+            ):
+                return self.inference_sampler.sample_diffusion_like_af3(
+                    f=input["f"],
+                    f_ref=f_ref,  # for cfg
+                    diffusion_module=self.diffusion_module,
+                    diffusion_batch_size=coord_atom_lvl_to_be_noised.shape[0],
+                    coord_atom_lvl_to_be_noised=coord_atom_lvl_to_be_noised,
+                    # Forwarded as **kwargs:
+                    initializer_outputs=initializer_outputs,
+                    ref_initializer_outputs=ref_initializer_outputs,  # for cfg
+                )

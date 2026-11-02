@@ -1,0 +1,64 @@
+input: ./inputs/GABA_random.json
+msa_paths:
+  B: /path/to/GABA_D8.a3m
+checkpoint_path: "/path/to/weights_with_confidence_2025_01_06"
+output_path: './outputs_entropy'
+self_template: True
+n_recycles: 1
+lr : 1e-1
+optimize_binder: True
+interface_only: False
+mutate_each: 5
+random_mut: False
+opt_steps:
+  total_steps: 10
+  T_init: 0.01
+  half_life: 2 # total_steps/5
+
+loss :
+  distogram_interface_entropy:
+    _target_: rfo.backprop.tools.loss.DistogramInterfaceEntropyLoss
+    weight: 1.0
+
+  inter_contact:
+    _target_: rfo.backprop.tools.loss.ContactLoss
+    contact_type: "inter"
+    cutoff: 22.0
+    k: 1
+    weight: 1.0
+  
+  intra_contact:
+    _target_: rfo.backprop.tools.loss.ContactLoss
+    contact_type: "intra"
+    cutoff: 14.0
+    k: 2
+    weight: 1.0
+
+  plddt_chainA_constrain : 
+    _target_: rfo.backprop.tools.loss.pLDDT_chain
+    "chainID" : "A_1"
+    "min" : "0.7"
+    "max" : "1"
+    weight : 1
+
+  plddt_chainB_constrain : 
+    _target_: rfo.backprop.tools.loss.pLDDT_chain
+    "chainID" : "B_1"
+    "min" : 0.8
+    "max" : 1
+    weight : 1
+  
+  plddt_catres_motif :
+    _target_: rfo.backprop.tools.loss.pLDDT_motif
+    "atom" : "0:MET:2:CA"
+    "min" : 0.9
+    "max" : 1
+    "weight" : 1
+
+  distance :
+    _target_: rfo.backprop.tools.loss.Distance
+    "atom_1" : "0:MET:1:CA" #entityID:resn:resi_idx1:atomName
+    "atom_2" : "0:ALA:3:CA"
+    "min" : 5
+    "max" : 10
+    weight : 1

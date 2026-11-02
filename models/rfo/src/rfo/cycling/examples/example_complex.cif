@@ -1,0 +1,738 @@
+data_test_components.cif
+#
+_entry.id       test_components.cif
+_entry.author   odinz
+_entry.date     2026-06-27
+_entry.time     01:41:43
+#
+loop_
+_entity_poly.entity_id 
+_entity_poly.type 
+_entity_poly.nstd_linkage 
+_entity_poly.nstd_monomer 
+_entity_poly.pdbx_seq_one_letter_code 
+_entity_poly.pdbx_seq_one_letter_code_can 
+_entity_poly.pdbx_strand_id 
+_entity_poly.pdbx_target_identifier 
+0 polypeptide(l) no no GEELKKLEEEIKKLGS                                         GEELKKLEEEIKKLGS                                         A ?
+1 polypeptide(l) no no MTYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE MTYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE B ?
+#
+loop_
+_chem_comp_bond.pdbx_ordinal 
+_chem_comp_bond.comp_id 
+_chem_comp_bond.atom_id_1 
+_chem_comp_bond.atom_id_2 
+_chem_comp_bond.value_order 
+_chem_comp_bond.pdbx_aromatic_flag 
+_chem_comp_bond.pdbx_stereo_config 
+1   GLY N   CA  SING N ?
+2   GLY CA  C   SING N ?
+3   GLY C   O   DOUB N ?
+4   GLU N   CA  SING N ?
+5   GLU CA  C   SING N ?
+6   GLU CA  CB  SING N ?
+7   GLU C   O   DOUB N ?
+8   GLU CB  CG  SING N ?
+9   GLU CG  CD  SING N ?
+10  GLU CD  OE1 DOUB N ?
+11  GLU CD  OE2 SING N ?
+12  LEU N   CA  SING N ?
+13  LEU CA  C   SING N ?
+14  LEU CA  CB  SING N ?
+15  LEU C   O   DOUB N ?
+16  LEU CB  CG  SING N ?
+17  LEU CG  CD1 SING N ?
+18  LEU CG  CD2 SING N ?
+19  LYS N   CA  SING N ?
+20  LYS CA  C   SING N ?
+21  LYS CA  CB  SING N ?
+22  LYS C   O   DOUB N ?
+23  LYS CB  CG  SING N ?
+24  LYS CG  CD  SING N ?
+25  LYS CD  CE  SING N ?
+26  LYS CE  NZ  SING N ?
+27  ILE N   CA  SING N ?
+28  ILE CA  C   SING N ?
+29  ILE CA  CB  SING N ?
+30  ILE C   O   DOUB N ?
+31  ILE CB  CG1 SING N ?
+32  ILE CB  CG2 SING N ?
+33  ILE CG1 CD1 SING N ?
+34  SER N   CA  SING N ?
+35  SER CA  C   SING N ?
+36  SER CA  CB  SING N ?
+37  SER C   O   DOUB N ?
+38  SER C   OXT SING N ?
+39  SER CB  OG  SING N ?
+40  MET N   CA  SING N ?
+41  MET CA  C   SING N ?
+42  MET CA  CB  SING N ?
+43  MET C   O   DOUB N ?
+44  MET CB  CG  SING N ?
+45  MET CG  SD  SING N ?
+46  MET SD  CE  SING N ?
+47  THR N   CA  SING N ?
+48  THR CA  C   SING N ?
+49  THR CA  CB  SING N ?
+50  THR C   O   DOUB N ?
+51  THR CB  OG1 SING N ?
+52  THR CB  CG2 SING N ?
+53  TYR N   CA  SING N ?
+54  TYR CA  C   SING N ?
+55  TYR CA  CB  SING N ?
+56  TYR C   O   DOUB N ?
+57  TYR CB  CG  SING N ?
+58  TYR CG  CD1 DOUB Y ?
+59  TYR CG  CD2 SING Y ?
+60  TYR CD1 CE1 SING Y ?
+61  TYR CD2 CE2 DOUB Y ?
+62  TYR CE1 CZ  DOUB Y ?
+63  TYR CE2 CZ  SING Y ?
+64  TYR CZ  OH  SING N ?
+65  ASN N   CA  SING N ?
+66  ASN CA  C   SING N ?
+67  ASN CA  CB  SING N ?
+68  ASN C   O   DOUB N ?
+69  ASN CB  CG  SING N ?
+70  ASN CG  OD1 DOUB N ?
+71  ASN CG  ND2 SING N ?
+72  ALA N   CA  SING N ?
+73  ALA CA  C   SING N ?
+74  ALA CA  CB  SING N ?
+75  ALA C   O   DOUB N ?
+76  VAL N   CA  SING N ?
+77  VAL CA  C   SING N ?
+78  VAL CA  CB  SING N ?
+79  VAL C   O   DOUB N ?
+80  VAL CB  CG1 SING N ?
+81  VAL CB  CG2 SING N ?
+82  ASP N   CA  SING N ?
+83  ASP CA  C   SING N ?
+84  ASP CA  CB  SING N ?
+85  ASP C   O   DOUB N ?
+86  ASP CB  CG  SING N ?
+87  ASP CG  OD1 DOUB N ?
+88  ASP CG  OD2 SING N ?
+89  PHE N   CA  SING N ?
+90  PHE CA  C   SING N ?
+91  PHE CA  CB  SING N ?
+92  PHE C   O   DOUB N ?
+93  PHE CB  CG  SING N ?
+94  PHE CG  CD1 DOUB Y ?
+95  PHE CG  CD2 SING Y ?
+96  PHE CD1 CE1 SING Y ?
+97  PHE CD2 CE2 DOUB Y ?
+98  PHE CE1 CZ  DOUB Y ?
+99  PHE CE2 CZ  SING Y ?
+100 GLN N   CA  SING N ?
+101 GLN CA  C   SING N ?
+102 GLN CA  CB  SING N ?
+103 GLN C   O   DOUB N ?
+104 GLN CB  CG  SING N ?
+105 GLN CG  CD  SING N ?
+106 GLN CD  OE1 DOUB N ?
+107 GLN CD  NE2 SING N ?
+108 TRP N   CA  SING N ?
+109 TRP CA  C   SING N ?
+110 TRP CA  CB  SING N ?
+111 TRP C   O   DOUB N ?
+112 TRP CB  CG  SING N ?
+113 TRP CG  CD1 DOUB Y ?
+114 TRP CG  CD2 SING Y ?
+115 TRP CD1 NE1 SING Y ?
+116 TRP CD2 CE2 DOUB Y ?
+117 TRP CD2 CE3 SING Y ?
+118 TRP NE1 CE2 SING Y ?
+119 TRP CE2 CZ2 SING Y ?
+120 TRP CE3 CZ3 DOUB Y ?
+121 TRP CZ2 CH2 DOUB Y ?
+122 TRP CZ3 CH2 SING Y ?
+123 GLU C   OXT SING N ?
+#
+loop_
+_atom_site.group_PDB 
+_atom_site.type_symbol 
+_atom_site.label_atom_id 
+_atom_site.label_alt_id 
+_atom_site.label_comp_id 
+_atom_site.label_asym_id 
+_atom_site.label_entity_id 
+_atom_site.label_seq_id 
+_atom_site.pdbx_PDB_ins_code 
+_atom_site.auth_seq_id 
+_atom_site.auth_comp_id 
+_atom_site.auth_asym_id 
+_atom_site.auth_atom_id 
+_atom_site.id 
+_atom_site.B_iso_or_equiv 
+_atom_site.occupancy 
+_atom_site.pdbx_formal_charge 
+_atom_site.Cartn_x 
+_atom_site.Cartn_y 
+_atom_site.Cartn_z 
+_atom_site.pdbx_PDB_model_num 
+ATOM N N   . GLY A 0 1  . 1  GLY A N   1   nan 1.0 ?  nan nan nan 1
+ATOM C CA  . GLY A 0 1  . 1  GLY A CA  2   nan 1.0 ?  nan nan nan 1
+ATOM C C   . GLY A 0 1  . 1  GLY A C   3   nan 1.0 ?  nan nan nan 1
+ATOM O O   . GLY A 0 1  . 1  GLY A O   4   nan 1.0 ?  nan nan nan 1
+ATOM N N   . GLU A 0 2  . 2  GLU A N   9   nan 1.0 ?  nan nan nan 1
+ATOM C CA  . GLU A 0 2  . 2  GLU A CA  10  nan 1.0 ?  nan nan nan 1
+ATOM C C   . GLU A 0 2  . 2  GLU A C   11  nan 1.0 ?  nan nan nan 1
+ATOM O O   . GLU A 0 2  . 2  GLU A O   12  nan 1.0 ?  nan nan nan 1
+ATOM C CB  . GLU A 0 2  . 2  GLU A CB  13  nan 1.0 ?  nan nan nan 1
+ATOM C CG  . GLU A 0 2  . 2  GLU A CG  14  nan 1.0 ?  nan nan nan 1
+ATOM C CD  . GLU A 0 2  . 2  GLU A CD  15  nan 1.0 ?  nan nan nan 1
+ATOM O OE1 . GLU A 0 2  . 2  GLU A OE1 16  nan 1.0 ?  nan nan nan 1
+ATOM O OE2 . GLU A 0 2  . 2  GLU A OE2 17  nan 1.0 ?  nan nan nan 1
+ATOM N N   . GLU A 0 3  . 3  GLU A N   25  nan 1.0 ?  nan nan nan 1
+ATOM C CA  . GLU A 0 3  . 3  GLU A CA  26  nan 1.0 ?  nan nan nan 1
+ATOM C C   . GLU A 0 3  . 3  GLU A C   27  nan 1.0 ?  nan nan nan 1
+ATOM O O   . GLU A 0 3  . 3  GLU A O   28  nan 1.0 ?  nan nan nan 1
+ATOM C CB  . GLU A 0 3  . 3  GLU A CB  29  nan 1.0 ?  nan nan nan 1
+ATOM C CG  . GLU A 0 3  . 3  GLU A CG  30  nan 1.0 ?  nan nan nan 1
+ATOM C CD  . GLU A 0 3  . 3  GLU A CD  31  nan 1.0 ?  nan nan nan 1
+ATOM O OE1 . GLU A 0 3  . 3  GLU A OE1 32  nan 1.0 ?  nan nan nan 1
+ATOM O OE2 . GLU A 0 3  . 3  GLU A OE2 33  nan 1.0 ?  nan nan nan 1
+ATOM N N   . LEU A 0 4  . 4  LEU A N   41  nan 1.0 ?  nan nan nan 1
+ATOM C CA  . LEU A 0 4  . 4  LEU A CA  42  nan 1.0 ?  nan nan nan 1
+ATOM C C   . LEU A 0 4  . 4  LEU A C   43  nan 1.0 ?  nan nan nan 1
+ATOM O O   . LEU A 0 4  . 4  LEU A O   44  nan 1.0 ?  nan nan nan 1
+ATOM C CB  . LEU A 0 4  . 4  LEU A CB  45  nan 1.0 ?  nan nan nan 1
+ATOM C CG  . LEU A 0 4  . 4  LEU A CG  46  nan 1.0 ?  nan nan nan 1
+ATOM C CD1 . LEU A 0 4  . 4  LEU A CD1 47  nan 1.0 ?  nan nan nan 1
+ATOM C CD2 . LEU A 0 4  . 4  LEU A CD2 48  nan 1.0 ?  nan nan nan 1
+ATOM N N   . LYS A 0 5  . 5  LYS A N   60  nan 1.0 ?  nan nan nan 1
+ATOM C CA  . LYS A 0 5  . 5  LYS A CA  61  nan 1.0 ?  nan nan nan 1
+ATOM C C   . LYS A 0 5  . 5  LYS A C   62  nan 1.0 ?  nan nan nan 1
+ATOM O O   . LYS A 0 5  . 5  LYS A O   63  nan 1.0 ?  nan nan nan 1
+ATOM C CB  . LYS A 0 5  . 5  LYS A CB  64  nan 1.0 ?  nan nan nan 1
+ATOM C CG  . LYS A 0 5  . 5  LYS A CG  65  nan 1.0 ?  nan nan nan 1
+ATOM C CD  . LYS A 0 5  . 5  LYS A CD  66  nan 1.0 ?  nan nan nan 1
+ATOM C CE  . LYS A 0 5  . 5  LYS A CE  67  nan 1.0 ?  nan nan nan 1
+ATOM N NZ  . LYS A 0 5  . 5  LYS A NZ  68  nan 1.0 +1 nan nan nan 1
+ATOM N N   . LYS A 0 6  . 6  LYS A N   82  nan 1.0 ?  nan nan nan 1
+ATOM C CA  . LYS A 0 6  . 6  LYS A CA  83  nan 1.0 ?  nan nan nan 1
+ATOM C C   . LYS A 0 6  . 6  LYS A C   84  nan 1.0 ?  nan nan nan 1
+ATOM O O   . LYS A 0 6  . 6  LYS A O   85  nan 1.0 ?  nan nan nan 1
+ATOM C CB  . LYS A 0 6  . 6  LYS A CB  86  nan 1.0 ?  nan nan nan 1
+ATOM C CG  . LYS A 0 6  . 6  LYS A CG  87  nan 1.0 ?  nan nan nan 1
+ATOM C CD  . LYS A 0 6  . 6  LYS A CD  88  nan 1.0 ?  nan nan nan 1
+ATOM C CE  . LYS A 0 6  . 6  LYS A CE  89  nan 1.0 ?  nan nan nan 1
+ATOM N NZ  . LYS A 0 6  . 6  LYS A NZ  90  nan 1.0 +1 nan nan nan 1
+ATOM N N   . LEU A 0 7  . 7  LEU A N   104 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . LEU A 0 7  . 7  LEU A CA  105 nan 1.0 ?  nan nan nan 1
+ATOM C C   . LEU A 0 7  . 7  LEU A C   106 nan 1.0 ?  nan nan nan 1
+ATOM O O   . LEU A 0 7  . 7  LEU A O   107 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . LEU A 0 7  . 7  LEU A CB  108 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . LEU A 0 7  . 7  LEU A CG  109 nan 1.0 ?  nan nan nan 1
+ATOM C CD1 . LEU A 0 7  . 7  LEU A CD1 110 nan 1.0 ?  nan nan nan 1
+ATOM C CD2 . LEU A 0 7  . 7  LEU A CD2 111 nan 1.0 ?  nan nan nan 1
+ATOM N N   . GLU A 0 8  . 8  GLU A N   123 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . GLU A 0 8  . 8  GLU A CA  124 nan 1.0 ?  nan nan nan 1
+ATOM C C   . GLU A 0 8  . 8  GLU A C   125 nan 1.0 ?  nan nan nan 1
+ATOM O O   . GLU A 0 8  . 8  GLU A O   126 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . GLU A 0 8  . 8  GLU A CB  127 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . GLU A 0 8  . 8  GLU A CG  128 nan 1.0 ?  nan nan nan 1
+ATOM C CD  . GLU A 0 8  . 8  GLU A CD  129 nan 1.0 ?  nan nan nan 1
+ATOM O OE1 . GLU A 0 8  . 8  GLU A OE1 130 nan 1.0 ?  nan nan nan 1
+ATOM O OE2 . GLU A 0 8  . 8  GLU A OE2 131 nan 1.0 ?  nan nan nan 1
+ATOM N N   . GLU A 0 9  . 9  GLU A N   139 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . GLU A 0 9  . 9  GLU A CA  140 nan 1.0 ?  nan nan nan 1
+ATOM C C   . GLU A 0 9  . 9  GLU A C   141 nan 1.0 ?  nan nan nan 1
+ATOM O O   . GLU A 0 9  . 9  GLU A O   142 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . GLU A 0 9  . 9  GLU A CB  143 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . GLU A 0 9  . 9  GLU A CG  144 nan 1.0 ?  nan nan nan 1
+ATOM C CD  . GLU A 0 9  . 9  GLU A CD  145 nan 1.0 ?  nan nan nan 1
+ATOM O OE1 . GLU A 0 9  . 9  GLU A OE1 146 nan 1.0 ?  nan nan nan 1
+ATOM O OE2 . GLU A 0 9  . 9  GLU A OE2 147 nan 1.0 ?  nan nan nan 1
+ATOM N N   . GLU A 0 10 . 10 GLU A N   155 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . GLU A 0 10 . 10 GLU A CA  156 nan 1.0 ?  nan nan nan 1
+ATOM C C   . GLU A 0 10 . 10 GLU A C   157 nan 1.0 ?  nan nan nan 1
+ATOM O O   . GLU A 0 10 . 10 GLU A O   158 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . GLU A 0 10 . 10 GLU A CB  159 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . GLU A 0 10 . 10 GLU A CG  160 nan 1.0 ?  nan nan nan 1
+ATOM C CD  . GLU A 0 10 . 10 GLU A CD  161 nan 1.0 ?  nan nan nan 1
+ATOM O OE1 . GLU A 0 10 . 10 GLU A OE1 162 nan 1.0 ?  nan nan nan 1
+ATOM O OE2 . GLU A 0 10 . 10 GLU A OE2 163 nan 1.0 ?  nan nan nan 1
+ATOM N N   . ILE A 0 11 . 11 ILE A N   171 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . ILE A 0 11 . 11 ILE A CA  172 nan 1.0 ?  nan nan nan 1
+ATOM C C   . ILE A 0 11 . 11 ILE A C   173 nan 1.0 ?  nan nan nan 1
+ATOM O O   . ILE A 0 11 . 11 ILE A O   174 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . ILE A 0 11 . 11 ILE A CB  175 nan 1.0 ?  nan nan nan 1
+ATOM C CG1 . ILE A 0 11 . 11 ILE A CG1 176 nan 1.0 ?  nan nan nan 1
+ATOM C CG2 . ILE A 0 11 . 11 ILE A CG2 177 nan 1.0 ?  nan nan nan 1
+ATOM C CD1 . ILE A 0 11 . 11 ILE A CD1 178 nan 1.0 ?  nan nan nan 1
+ATOM N N   . LYS A 0 12 . 12 LYS A N   190 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . LYS A 0 12 . 12 LYS A CA  191 nan 1.0 ?  nan nan nan 1
+ATOM C C   . LYS A 0 12 . 12 LYS A C   192 nan 1.0 ?  nan nan nan 1
+ATOM O O   . LYS A 0 12 . 12 LYS A O   193 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . LYS A 0 12 . 12 LYS A CB  194 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . LYS A 0 12 . 12 LYS A CG  195 nan 1.0 ?  nan nan nan 1
+ATOM C CD  . LYS A 0 12 . 12 LYS A CD  196 nan 1.0 ?  nan nan nan 1
+ATOM C CE  . LYS A 0 12 . 12 LYS A CE  197 nan 1.0 ?  nan nan nan 1
+ATOM N NZ  . LYS A 0 12 . 12 LYS A NZ  198 nan 1.0 +1 nan nan nan 1
+ATOM N N   . LYS A 0 13 . 13 LYS A N   212 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . LYS A 0 13 . 13 LYS A CA  213 nan 1.0 ?  nan nan nan 1
+ATOM C C   . LYS A 0 13 . 13 LYS A C   214 nan 1.0 ?  nan nan nan 1
+ATOM O O   . LYS A 0 13 . 13 LYS A O   215 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . LYS A 0 13 . 13 LYS A CB  216 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . LYS A 0 13 . 13 LYS A CG  217 nan 1.0 ?  nan nan nan 1
+ATOM C CD  . LYS A 0 13 . 13 LYS A CD  218 nan 1.0 ?  nan nan nan 1
+ATOM C CE  . LYS A 0 13 . 13 LYS A CE  219 nan 1.0 ?  nan nan nan 1
+ATOM N NZ  . LYS A 0 13 . 13 LYS A NZ  220 nan 1.0 +1 nan nan nan 1
+ATOM N N   . LEU A 0 14 . 14 LEU A N   234 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . LEU A 0 14 . 14 LEU A CA  235 nan 1.0 ?  nan nan nan 1
+ATOM C C   . LEU A 0 14 . 14 LEU A C   236 nan 1.0 ?  nan nan nan 1
+ATOM O O   . LEU A 0 14 . 14 LEU A O   237 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . LEU A 0 14 . 14 LEU A CB  238 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . LEU A 0 14 . 14 LEU A CG  239 nan 1.0 ?  nan nan nan 1
+ATOM C CD1 . LEU A 0 14 . 14 LEU A CD1 240 nan 1.0 ?  nan nan nan 1
+ATOM C CD2 . LEU A 0 14 . 14 LEU A CD2 241 nan 1.0 ?  nan nan nan 1
+ATOM N N   . GLY A 0 15 . 15 GLY A N   253 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . GLY A 0 15 . 15 GLY A CA  254 nan 1.0 ?  nan nan nan 1
+ATOM C C   . GLY A 0 15 . 15 GLY A C   255 nan 1.0 ?  nan nan nan 1
+ATOM O O   . GLY A 0 15 . 15 GLY A O   256 nan 1.0 ?  nan nan nan 1
+ATOM N N   . SER A 0 16 . 16 SER A N   260 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . SER A 0 16 . 16 SER A CA  261 nan 1.0 ?  nan nan nan 1
+ATOM C C   . SER A 0 16 . 16 SER A C   262 nan 1.0 ?  nan nan nan 1
+ATOM O O   . SER A 0 16 . 16 SER A O   263 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . SER A 0 16 . 16 SER A CB  264 nan 1.0 ?  nan nan nan 1
+ATOM O OG  . SER A 0 16 . 16 SER A OG  265 nan 1.0 ?  nan nan nan 1
+ATOM O OXT . SER A 0 16 . 16 SER A OXT 266 nan 1.0 ?  nan nan nan 1
+ATOM N N   . MET B 1 1  . 1  MET B N   1   nan 1.0 ?  nan nan nan 1
+ATOM C CA  . MET B 1 1  . 1  MET B CA  2   nan 1.0 ?  nan nan nan 1
+ATOM C C   . MET B 1 1  . 1  MET B C   3   nan 1.0 ?  nan nan nan 1
+ATOM O O   . MET B 1 1  . 1  MET B O   4   nan 1.0 ?  nan nan nan 1
+ATOM C CB  . MET B 1 1  . 1  MET B CB  5   nan 1.0 ?  nan nan nan 1
+ATOM C CG  . MET B 1 1  . 1  MET B CG  6   nan 1.0 ?  nan nan nan 1
+ATOM S SD  . MET B 1 1  . 1  MET B SD  7   nan 1.0 ?  nan nan nan 1
+ATOM C CE  . MET B 1 1  . 1  MET B CE  8   nan 1.0 ?  nan nan nan 1
+ATOM N N   . THR B 1 2  . 2  THR B N   19  nan 1.0 ?  nan nan nan 1
+ATOM C CA  . THR B 1 2  . 2  THR B CA  20  nan 1.0 ?  nan nan nan 1
+ATOM C C   . THR B 1 2  . 2  THR B C   21  nan 1.0 ?  nan nan nan 1
+ATOM O O   . THR B 1 2  . 2  THR B O   22  nan 1.0 ?  nan nan nan 1
+ATOM C CB  . THR B 1 2  . 2  THR B CB  23  nan 1.0 ?  nan nan nan 1
+ATOM O OG1 . THR B 1 2  . 2  THR B OG1 24  nan 1.0 ?  nan nan nan 1
+ATOM C CG2 . THR B 1 2  . 2  THR B CG2 25  nan 1.0 ?  nan nan nan 1
+ATOM N N   . TYR B 1 3  . 3  TYR B N   33  nan 1.0 ?  nan nan nan 1
+ATOM C CA  . TYR B 1 3  . 3  TYR B CA  34  nan 1.0 ?  nan nan nan 1
+ATOM C C   . TYR B 1 3  . 3  TYR B C   35  nan 1.0 ?  nan nan nan 1
+ATOM O O   . TYR B 1 3  . 3  TYR B O   36  nan 1.0 ?  nan nan nan 1
+ATOM C CB  . TYR B 1 3  . 3  TYR B CB  37  nan 1.0 ?  nan nan nan 1
+ATOM C CG  . TYR B 1 3  . 3  TYR B CG  38  nan 1.0 ?  nan nan nan 1
+ATOM C CD1 . TYR B 1 3  . 3  TYR B CD1 39  nan 1.0 ?  nan nan nan 1
+ATOM C CD2 . TYR B 1 3  . 3  TYR B CD2 40  nan 1.0 ?  nan nan nan 1
+ATOM C CE1 . TYR B 1 3  . 3  TYR B CE1 41  nan 1.0 ?  nan nan nan 1
+ATOM C CE2 . TYR B 1 3  . 3  TYR B CE2 42  nan 1.0 ?  nan nan nan 1
+ATOM C CZ  . TYR B 1 3  . 3  TYR B CZ  43  nan 1.0 ?  nan nan nan 1
+ATOM O OH  . TYR B 1 3  . 3  TYR B OH  44  nan 1.0 ?  nan nan nan 1
+ATOM N N   . LYS B 1 4  . 4  LYS B N   54  nan 1.0 ?  nan nan nan 1
+ATOM C CA  . LYS B 1 4  . 4  LYS B CA  55  nan 1.0 ?  nan nan nan 1
+ATOM C C   . LYS B 1 4  . 4  LYS B C   56  nan 1.0 ?  nan nan nan 1
+ATOM O O   . LYS B 1 4  . 4  LYS B O   57  nan 1.0 ?  nan nan nan 1
+ATOM C CB  . LYS B 1 4  . 4  LYS B CB  58  nan 1.0 ?  nan nan nan 1
+ATOM C CG  . LYS B 1 4  . 4  LYS B CG  59  nan 1.0 ?  nan nan nan 1
+ATOM C CD  . LYS B 1 4  . 4  LYS B CD  60  nan 1.0 ?  nan nan nan 1
+ATOM C CE  . LYS B 1 4  . 4  LYS B CE  61  nan 1.0 ?  nan nan nan 1
+ATOM N NZ  . LYS B 1 4  . 4  LYS B NZ  62  nan 1.0 +1 nan nan nan 1
+ATOM N N   . LEU B 1 5  . 5  LEU B N   76  nan 1.0 ?  nan nan nan 1
+ATOM C CA  . LEU B 1 5  . 5  LEU B CA  77  nan 1.0 ?  nan nan nan 1
+ATOM C C   . LEU B 1 5  . 5  LEU B C   78  nan 1.0 ?  nan nan nan 1
+ATOM O O   . LEU B 1 5  . 5  LEU B O   79  nan 1.0 ?  nan nan nan 1
+ATOM C CB  . LEU B 1 5  . 5  LEU B CB  80  nan 1.0 ?  nan nan nan 1
+ATOM C CG  . LEU B 1 5  . 5  LEU B CG  81  nan 1.0 ?  nan nan nan 1
+ATOM C CD1 . LEU B 1 5  . 5  LEU B CD1 82  nan 1.0 ?  nan nan nan 1
+ATOM C CD2 . LEU B 1 5  . 5  LEU B CD2 83  nan 1.0 ?  nan nan nan 1
+ATOM N N   . ILE B 1 6  . 6  ILE B N   95  nan 1.0 ?  nan nan nan 1
+ATOM C CA  . ILE B 1 6  . 6  ILE B CA  96  nan 1.0 ?  nan nan nan 1
+ATOM C C   . ILE B 1 6  . 6  ILE B C   97  nan 1.0 ?  nan nan nan 1
+ATOM O O   . ILE B 1 6  . 6  ILE B O   98  nan 1.0 ?  nan nan nan 1
+ATOM C CB  . ILE B 1 6  . 6  ILE B CB  99  nan 1.0 ?  nan nan nan 1
+ATOM C CG1 . ILE B 1 6  . 6  ILE B CG1 100 nan 1.0 ?  nan nan nan 1
+ATOM C CG2 . ILE B 1 6  . 6  ILE B CG2 101 nan 1.0 ?  nan nan nan 1
+ATOM C CD1 . ILE B 1 6  . 6  ILE B CD1 102 nan 1.0 ?  nan nan nan 1
+ATOM N N   . LEU B 1 7  . 7  LEU B N   114 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . LEU B 1 7  . 7  LEU B CA  115 nan 1.0 ?  nan nan nan 1
+ATOM C C   . LEU B 1 7  . 7  LEU B C   116 nan 1.0 ?  nan nan nan 1
+ATOM O O   . LEU B 1 7  . 7  LEU B O   117 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . LEU B 1 7  . 7  LEU B CB  118 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . LEU B 1 7  . 7  LEU B CG  119 nan 1.0 ?  nan nan nan 1
+ATOM C CD1 . LEU B 1 7  . 7  LEU B CD1 120 nan 1.0 ?  nan nan nan 1
+ATOM C CD2 . LEU B 1 7  . 7  LEU B CD2 121 nan 1.0 ?  nan nan nan 1
+ATOM N N   . ASN B 1 8  . 8  ASN B N   133 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . ASN B 1 8  . 8  ASN B CA  134 nan 1.0 ?  nan nan nan 1
+ATOM C C   . ASN B 1 8  . 8  ASN B C   135 nan 1.0 ?  nan nan nan 1
+ATOM O O   . ASN B 1 8  . 8  ASN B O   136 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . ASN B 1 8  . 8  ASN B CB  137 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . ASN B 1 8  . 8  ASN B CG  138 nan 1.0 ?  nan nan nan 1
+ATOM O OD1 . ASN B 1 8  . 8  ASN B OD1 139 nan 1.0 ?  nan nan nan 1
+ATOM N ND2 . ASN B 1 8  . 8  ASN B ND2 140 nan 1.0 ?  nan nan nan 1
+ATOM N N   . GLY B 1 9  . 9  GLY B N   147 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . GLY B 1 9  . 9  GLY B CA  148 nan 1.0 ?  nan nan nan 1
+ATOM C C   . GLY B 1 9  . 9  GLY B C   149 nan 1.0 ?  nan nan nan 1
+ATOM O O   . GLY B 1 9  . 9  GLY B O   150 nan 1.0 ?  nan nan nan 1
+ATOM N N   . LYS B 1 10 . 10 LYS B N   154 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . LYS B 1 10 . 10 LYS B CA  155 nan 1.0 ?  nan nan nan 1
+ATOM C C   . LYS B 1 10 . 10 LYS B C   156 nan 1.0 ?  nan nan nan 1
+ATOM O O   . LYS B 1 10 . 10 LYS B O   157 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . LYS B 1 10 . 10 LYS B CB  158 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . LYS B 1 10 . 10 LYS B CG  159 nan 1.0 ?  nan nan nan 1
+ATOM C CD  . LYS B 1 10 . 10 LYS B CD  160 nan 1.0 ?  nan nan nan 1
+ATOM C CE  . LYS B 1 10 . 10 LYS B CE  161 nan 1.0 ?  nan nan nan 1
+ATOM N NZ  . LYS B 1 10 . 10 LYS B NZ  162 nan 1.0 +1 nan nan nan 1
+ATOM N N   . THR B 1 11 . 11 THR B N   176 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . THR B 1 11 . 11 THR B CA  177 nan 1.0 ?  nan nan nan 1
+ATOM C C   . THR B 1 11 . 11 THR B C   178 nan 1.0 ?  nan nan nan 1
+ATOM O O   . THR B 1 11 . 11 THR B O   179 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . THR B 1 11 . 11 THR B CB  180 nan 1.0 ?  nan nan nan 1
+ATOM O OG1 . THR B 1 11 . 11 THR B OG1 181 nan 1.0 ?  nan nan nan 1
+ATOM C CG2 . THR B 1 11 . 11 THR B CG2 182 nan 1.0 ?  nan nan nan 1
+ATOM N N   . LEU B 1 12 . 12 LEU B N   190 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . LEU B 1 12 . 12 LEU B CA  191 nan 1.0 ?  nan nan nan 1
+ATOM C C   . LEU B 1 12 . 12 LEU B C   192 nan 1.0 ?  nan nan nan 1
+ATOM O O   . LEU B 1 12 . 12 LEU B O   193 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . LEU B 1 12 . 12 LEU B CB  194 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . LEU B 1 12 . 12 LEU B CG  195 nan 1.0 ?  nan nan nan 1
+ATOM C CD1 . LEU B 1 12 . 12 LEU B CD1 196 nan 1.0 ?  nan nan nan 1
+ATOM C CD2 . LEU B 1 12 . 12 LEU B CD2 197 nan 1.0 ?  nan nan nan 1
+ATOM N N   . LYS B 1 13 . 13 LYS B N   209 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . LYS B 1 13 . 13 LYS B CA  210 nan 1.0 ?  nan nan nan 1
+ATOM C C   . LYS B 1 13 . 13 LYS B C   211 nan 1.0 ?  nan nan nan 1
+ATOM O O   . LYS B 1 13 . 13 LYS B O   212 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . LYS B 1 13 . 13 LYS B CB  213 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . LYS B 1 13 . 13 LYS B CG  214 nan 1.0 ?  nan nan nan 1
+ATOM C CD  . LYS B 1 13 . 13 LYS B CD  215 nan 1.0 ?  nan nan nan 1
+ATOM C CE  . LYS B 1 13 . 13 LYS B CE  216 nan 1.0 ?  nan nan nan 1
+ATOM N NZ  . LYS B 1 13 . 13 LYS B NZ  217 nan 1.0 +1 nan nan nan 1
+ATOM N N   . GLY B 1 14 . 14 GLY B N   231 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . GLY B 1 14 . 14 GLY B CA  232 nan 1.0 ?  nan nan nan 1
+ATOM C C   . GLY B 1 14 . 14 GLY B C   233 nan 1.0 ?  nan nan nan 1
+ATOM O O   . GLY B 1 14 . 14 GLY B O   234 nan 1.0 ?  nan nan nan 1
+ATOM N N   . GLU B 1 15 . 15 GLU B N   238 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . GLU B 1 15 . 15 GLU B CA  239 nan 1.0 ?  nan nan nan 1
+ATOM C C   . GLU B 1 15 . 15 GLU B C   240 nan 1.0 ?  nan nan nan 1
+ATOM O O   . GLU B 1 15 . 15 GLU B O   241 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . GLU B 1 15 . 15 GLU B CB  242 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . GLU B 1 15 . 15 GLU B CG  243 nan 1.0 ?  nan nan nan 1
+ATOM C CD  . GLU B 1 15 . 15 GLU B CD  244 nan 1.0 ?  nan nan nan 1
+ATOM O OE1 . GLU B 1 15 . 15 GLU B OE1 245 nan 1.0 ?  nan nan nan 1
+ATOM O OE2 . GLU B 1 15 . 15 GLU B OE2 246 nan 1.0 ?  nan nan nan 1
+ATOM N N   . THR B 1 16 . 16 THR B N   254 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . THR B 1 16 . 16 THR B CA  255 nan 1.0 ?  nan nan nan 1
+ATOM C C   . THR B 1 16 . 16 THR B C   256 nan 1.0 ?  nan nan nan 1
+ATOM O O   . THR B 1 16 . 16 THR B O   257 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . THR B 1 16 . 16 THR B CB  258 nan 1.0 ?  nan nan nan 1
+ATOM O OG1 . THR B 1 16 . 16 THR B OG1 259 nan 1.0 ?  nan nan nan 1
+ATOM C CG2 . THR B 1 16 . 16 THR B CG2 260 nan 1.0 ?  nan nan nan 1
+ATOM N N   . THR B 1 17 . 17 THR B N   268 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . THR B 1 17 . 17 THR B CA  269 nan 1.0 ?  nan nan nan 1
+ATOM C C   . THR B 1 17 . 17 THR B C   270 nan 1.0 ?  nan nan nan 1
+ATOM O O   . THR B 1 17 . 17 THR B O   271 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . THR B 1 17 . 17 THR B CB  272 nan 1.0 ?  nan nan nan 1
+ATOM O OG1 . THR B 1 17 . 17 THR B OG1 273 nan 1.0 ?  nan nan nan 1
+ATOM C CG2 . THR B 1 17 . 17 THR B CG2 274 nan 1.0 ?  nan nan nan 1
+ATOM N N   . THR B 1 18 . 18 THR B N   282 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . THR B 1 18 . 18 THR B CA  283 nan 1.0 ?  nan nan nan 1
+ATOM C C   . THR B 1 18 . 18 THR B C   284 nan 1.0 ?  nan nan nan 1
+ATOM O O   . THR B 1 18 . 18 THR B O   285 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . THR B 1 18 . 18 THR B CB  286 nan 1.0 ?  nan nan nan 1
+ATOM O OG1 . THR B 1 18 . 18 THR B OG1 287 nan 1.0 ?  nan nan nan 1
+ATOM C CG2 . THR B 1 18 . 18 THR B CG2 288 nan 1.0 ?  nan nan nan 1
+ATOM N N   . GLU B 1 19 . 19 GLU B N   296 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . GLU B 1 19 . 19 GLU B CA  297 nan 1.0 ?  nan nan nan 1
+ATOM C C   . GLU B 1 19 . 19 GLU B C   298 nan 1.0 ?  nan nan nan 1
+ATOM O O   . GLU B 1 19 . 19 GLU B O   299 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . GLU B 1 19 . 19 GLU B CB  300 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . GLU B 1 19 . 19 GLU B CG  301 nan 1.0 ?  nan nan nan 1
+ATOM C CD  . GLU B 1 19 . 19 GLU B CD  302 nan 1.0 ?  nan nan nan 1
+ATOM O OE1 . GLU B 1 19 . 19 GLU B OE1 303 nan 1.0 ?  nan nan nan 1
+ATOM O OE2 . GLU B 1 19 . 19 GLU B OE2 304 nan 1.0 ?  nan nan nan 1
+ATOM N N   . ALA B 1 20 . 20 ALA B N   312 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . ALA B 1 20 . 20 ALA B CA  313 nan 1.0 ?  nan nan nan 1
+ATOM C C   . ALA B 1 20 . 20 ALA B C   314 nan 1.0 ?  nan nan nan 1
+ATOM O O   . ALA B 1 20 . 20 ALA B O   315 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . ALA B 1 20 . 20 ALA B CB  316 nan 1.0 ?  nan nan nan 1
+ATOM N N   . VAL B 1 21 . 21 VAL B N   322 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . VAL B 1 21 . 21 VAL B CA  323 nan 1.0 ?  nan nan nan 1
+ATOM C C   . VAL B 1 21 . 21 VAL B C   324 nan 1.0 ?  nan nan nan 1
+ATOM O O   . VAL B 1 21 . 21 VAL B O   325 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . VAL B 1 21 . 21 VAL B CB  326 nan 1.0 ?  nan nan nan 1
+ATOM C CG1 . VAL B 1 21 . 21 VAL B CG1 327 nan 1.0 ?  nan nan nan 1
+ATOM C CG2 . VAL B 1 21 . 21 VAL B CG2 328 nan 1.0 ?  nan nan nan 1
+ATOM N N   . ASP B 1 22 . 22 ASP B N   338 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . ASP B 1 22 . 22 ASP B CA  339 nan 1.0 ?  nan nan nan 1
+ATOM C C   . ASP B 1 22 . 22 ASP B C   340 nan 1.0 ?  nan nan nan 1
+ATOM O O   . ASP B 1 22 . 22 ASP B O   341 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . ASP B 1 22 . 22 ASP B CB  342 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . ASP B 1 22 . 22 ASP B CG  343 nan 1.0 ?  nan nan nan 1
+ATOM O OD1 . ASP B 1 22 . 22 ASP B OD1 344 nan 1.0 ?  nan nan nan 1
+ATOM O OD2 . ASP B 1 22 . 22 ASP B OD2 345 nan 1.0 ?  nan nan nan 1
+ATOM N N   . ALA B 1 23 . 23 ALA B N   351 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . ALA B 1 23 . 23 ALA B CA  352 nan 1.0 ?  nan nan nan 1
+ATOM C C   . ALA B 1 23 . 23 ALA B C   353 nan 1.0 ?  nan nan nan 1
+ATOM O O   . ALA B 1 23 . 23 ALA B O   354 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . ALA B 1 23 . 23 ALA B CB  355 nan 1.0 ?  nan nan nan 1
+ATOM N N   . ALA B 1 24 . 24 ALA B N   361 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . ALA B 1 24 . 24 ALA B CA  362 nan 1.0 ?  nan nan nan 1
+ATOM C C   . ALA B 1 24 . 24 ALA B C   363 nan 1.0 ?  nan nan nan 1
+ATOM O O   . ALA B 1 24 . 24 ALA B O   364 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . ALA B 1 24 . 24 ALA B CB  365 nan 1.0 ?  nan nan nan 1
+ATOM N N   . THR B 1 25 . 25 THR B N   371 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . THR B 1 25 . 25 THR B CA  372 nan 1.0 ?  nan nan nan 1
+ATOM C C   . THR B 1 25 . 25 THR B C   373 nan 1.0 ?  nan nan nan 1
+ATOM O O   . THR B 1 25 . 25 THR B O   374 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . THR B 1 25 . 25 THR B CB  375 nan 1.0 ?  nan nan nan 1
+ATOM O OG1 . THR B 1 25 . 25 THR B OG1 376 nan 1.0 ?  nan nan nan 1
+ATOM C CG2 . THR B 1 25 . 25 THR B CG2 377 nan 1.0 ?  nan nan nan 1
+ATOM N N   . ALA B 1 26 . 26 ALA B N   385 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . ALA B 1 26 . 26 ALA B CA  386 nan 1.0 ?  nan nan nan 1
+ATOM C C   . ALA B 1 26 . 26 ALA B C   387 nan 1.0 ?  nan nan nan 1
+ATOM O O   . ALA B 1 26 . 26 ALA B O   388 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . ALA B 1 26 . 26 ALA B CB  389 nan 1.0 ?  nan nan nan 1
+ATOM N N   . GLU B 1 27 . 27 GLU B N   395 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . GLU B 1 27 . 27 GLU B CA  396 nan 1.0 ?  nan nan nan 1
+ATOM C C   . GLU B 1 27 . 27 GLU B C   397 nan 1.0 ?  nan nan nan 1
+ATOM O O   . GLU B 1 27 . 27 GLU B O   398 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . GLU B 1 27 . 27 GLU B CB  399 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . GLU B 1 27 . 27 GLU B CG  400 nan 1.0 ?  nan nan nan 1
+ATOM C CD  . GLU B 1 27 . 27 GLU B CD  401 nan 1.0 ?  nan nan nan 1
+ATOM O OE1 . GLU B 1 27 . 27 GLU B OE1 402 nan 1.0 ?  nan nan nan 1
+ATOM O OE2 . GLU B 1 27 . 27 GLU B OE2 403 nan 1.0 ?  nan nan nan 1
+ATOM N N   . LYS B 1 28 . 28 LYS B N   411 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . LYS B 1 28 . 28 LYS B CA  412 nan 1.0 ?  nan nan nan 1
+ATOM C C   . LYS B 1 28 . 28 LYS B C   413 nan 1.0 ?  nan nan nan 1
+ATOM O O   . LYS B 1 28 . 28 LYS B O   414 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . LYS B 1 28 . 28 LYS B CB  415 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . LYS B 1 28 . 28 LYS B CG  416 nan 1.0 ?  nan nan nan 1
+ATOM C CD  . LYS B 1 28 . 28 LYS B CD  417 nan 1.0 ?  nan nan nan 1
+ATOM C CE  . LYS B 1 28 . 28 LYS B CE  418 nan 1.0 ?  nan nan nan 1
+ATOM N NZ  . LYS B 1 28 . 28 LYS B NZ  419 nan 1.0 +1 nan nan nan 1
+ATOM N N   . VAL B 1 29 . 29 VAL B N   433 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . VAL B 1 29 . 29 VAL B CA  434 nan 1.0 ?  nan nan nan 1
+ATOM C C   . VAL B 1 29 . 29 VAL B C   435 nan 1.0 ?  nan nan nan 1
+ATOM O O   . VAL B 1 29 . 29 VAL B O   436 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . VAL B 1 29 . 29 VAL B CB  437 nan 1.0 ?  nan nan nan 1
+ATOM C CG1 . VAL B 1 29 . 29 VAL B CG1 438 nan 1.0 ?  nan nan nan 1
+ATOM C CG2 . VAL B 1 29 . 29 VAL B CG2 439 nan 1.0 ?  nan nan nan 1
+ATOM N N   . PHE B 1 30 . 30 PHE B N   449 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . PHE B 1 30 . 30 PHE B CA  450 nan 1.0 ?  nan nan nan 1
+ATOM C C   . PHE B 1 30 . 30 PHE B C   451 nan 1.0 ?  nan nan nan 1
+ATOM O O   . PHE B 1 30 . 30 PHE B O   452 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . PHE B 1 30 . 30 PHE B CB  453 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . PHE B 1 30 . 30 PHE B CG  454 nan 1.0 ?  nan nan nan 1
+ATOM C CD1 . PHE B 1 30 . 30 PHE B CD1 455 nan 1.0 ?  nan nan nan 1
+ATOM C CD2 . PHE B 1 30 . 30 PHE B CD2 456 nan 1.0 ?  nan nan nan 1
+ATOM C CE1 . PHE B 1 30 . 30 PHE B CE1 457 nan 1.0 ?  nan nan nan 1
+ATOM C CE2 . PHE B 1 30 . 30 PHE B CE2 458 nan 1.0 ?  nan nan nan 1
+ATOM C CZ  . PHE B 1 30 . 30 PHE B CZ  459 nan 1.0 ?  nan nan nan 1
+ATOM N N   . LYS B 1 31 . 31 LYS B N   469 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . LYS B 1 31 . 31 LYS B CA  470 nan 1.0 ?  nan nan nan 1
+ATOM C C   . LYS B 1 31 . 31 LYS B C   471 nan 1.0 ?  nan nan nan 1
+ATOM O O   . LYS B 1 31 . 31 LYS B O   472 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . LYS B 1 31 . 31 LYS B CB  473 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . LYS B 1 31 . 31 LYS B CG  474 nan 1.0 ?  nan nan nan 1
+ATOM C CD  . LYS B 1 31 . 31 LYS B CD  475 nan 1.0 ?  nan nan nan 1
+ATOM C CE  . LYS B 1 31 . 31 LYS B CE  476 nan 1.0 ?  nan nan nan 1
+ATOM N NZ  . LYS B 1 31 . 31 LYS B NZ  477 nan 1.0 +1 nan nan nan 1
+ATOM N N   . GLN B 1 32 . 32 GLN B N   491 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . GLN B 1 32 . 32 GLN B CA  492 nan 1.0 ?  nan nan nan 1
+ATOM C C   . GLN B 1 32 . 32 GLN B C   493 nan 1.0 ?  nan nan nan 1
+ATOM O O   . GLN B 1 32 . 32 GLN B O   494 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . GLN B 1 32 . 32 GLN B CB  495 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . GLN B 1 32 . 32 GLN B CG  496 nan 1.0 ?  nan nan nan 1
+ATOM C CD  . GLN B 1 32 . 32 GLN B CD  497 nan 1.0 ?  nan nan nan 1
+ATOM O OE1 . GLN B 1 32 . 32 GLN B OE1 498 nan 1.0 ?  nan nan nan 1
+ATOM N NE2 . GLN B 1 32 . 32 GLN B NE2 499 nan 1.0 ?  nan nan nan 1
+ATOM N N   . TYR B 1 33 . 33 TYR B N   508 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . TYR B 1 33 . 33 TYR B CA  509 nan 1.0 ?  nan nan nan 1
+ATOM C C   . TYR B 1 33 . 33 TYR B C   510 nan 1.0 ?  nan nan nan 1
+ATOM O O   . TYR B 1 33 . 33 TYR B O   511 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . TYR B 1 33 . 33 TYR B CB  512 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . TYR B 1 33 . 33 TYR B CG  513 nan 1.0 ?  nan nan nan 1
+ATOM C CD1 . TYR B 1 33 . 33 TYR B CD1 514 nan 1.0 ?  nan nan nan 1
+ATOM C CD2 . TYR B 1 33 . 33 TYR B CD2 515 nan 1.0 ?  nan nan nan 1
+ATOM C CE1 . TYR B 1 33 . 33 TYR B CE1 516 nan 1.0 ?  nan nan nan 1
+ATOM C CE2 . TYR B 1 33 . 33 TYR B CE2 517 nan 1.0 ?  nan nan nan 1
+ATOM C CZ  . TYR B 1 33 . 33 TYR B CZ  518 nan 1.0 ?  nan nan nan 1
+ATOM O OH  . TYR B 1 33 . 33 TYR B OH  519 nan 1.0 ?  nan nan nan 1
+ATOM N N   . ALA B 1 34 . 34 ALA B N   529 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . ALA B 1 34 . 34 ALA B CA  530 nan 1.0 ?  nan nan nan 1
+ATOM C C   . ALA B 1 34 . 34 ALA B C   531 nan 1.0 ?  nan nan nan 1
+ATOM O O   . ALA B 1 34 . 34 ALA B O   532 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . ALA B 1 34 . 34 ALA B CB  533 nan 1.0 ?  nan nan nan 1
+ATOM N N   . ASN B 1 35 . 35 ASN B N   539 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . ASN B 1 35 . 35 ASN B CA  540 nan 1.0 ?  nan nan nan 1
+ATOM C C   . ASN B 1 35 . 35 ASN B C   541 nan 1.0 ?  nan nan nan 1
+ATOM O O   . ASN B 1 35 . 35 ASN B O   542 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . ASN B 1 35 . 35 ASN B CB  543 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . ASN B 1 35 . 35 ASN B CG  544 nan 1.0 ?  nan nan nan 1
+ATOM O OD1 . ASN B 1 35 . 35 ASN B OD1 545 nan 1.0 ?  nan nan nan 1
+ATOM N ND2 . ASN B 1 35 . 35 ASN B ND2 546 nan 1.0 ?  nan nan nan 1
+ATOM N N   . ASP B 1 36 . 36 ASP B N   553 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . ASP B 1 36 . 36 ASP B CA  554 nan 1.0 ?  nan nan nan 1
+ATOM C C   . ASP B 1 36 . 36 ASP B C   555 nan 1.0 ?  nan nan nan 1
+ATOM O O   . ASP B 1 36 . 36 ASP B O   556 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . ASP B 1 36 . 36 ASP B CB  557 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . ASP B 1 36 . 36 ASP B CG  558 nan 1.0 ?  nan nan nan 1
+ATOM O OD1 . ASP B 1 36 . 36 ASP B OD1 559 nan 1.0 ?  nan nan nan 1
+ATOM O OD2 . ASP B 1 36 . 36 ASP B OD2 560 nan 1.0 ?  nan nan nan 1
+ATOM N N   . ASN B 1 37 . 37 ASN B N   566 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . ASN B 1 37 . 37 ASN B CA  567 nan 1.0 ?  nan nan nan 1
+ATOM C C   . ASN B 1 37 . 37 ASN B C   568 nan 1.0 ?  nan nan nan 1
+ATOM O O   . ASN B 1 37 . 37 ASN B O   569 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . ASN B 1 37 . 37 ASN B CB  570 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . ASN B 1 37 . 37 ASN B CG  571 nan 1.0 ?  nan nan nan 1
+ATOM O OD1 . ASN B 1 37 . 37 ASN B OD1 572 nan 1.0 ?  nan nan nan 1
+ATOM N ND2 . ASN B 1 37 . 37 ASN B ND2 573 nan 1.0 ?  nan nan nan 1
+ATOM N N   . GLY B 1 38 . 38 GLY B N   580 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . GLY B 1 38 . 38 GLY B CA  581 nan 1.0 ?  nan nan nan 1
+ATOM C C   . GLY B 1 38 . 38 GLY B C   582 nan 1.0 ?  nan nan nan 1
+ATOM O O   . GLY B 1 38 . 38 GLY B O   583 nan 1.0 ?  nan nan nan 1
+ATOM N N   . VAL B 1 39 . 39 VAL B N   587 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . VAL B 1 39 . 39 VAL B CA  588 nan 1.0 ?  nan nan nan 1
+ATOM C C   . VAL B 1 39 . 39 VAL B C   589 nan 1.0 ?  nan nan nan 1
+ATOM O O   . VAL B 1 39 . 39 VAL B O   590 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . VAL B 1 39 . 39 VAL B CB  591 nan 1.0 ?  nan nan nan 1
+ATOM C CG1 . VAL B 1 39 . 39 VAL B CG1 592 nan 1.0 ?  nan nan nan 1
+ATOM C CG2 . VAL B 1 39 . 39 VAL B CG2 593 nan 1.0 ?  nan nan nan 1
+ATOM N N   . ASP B 1 40 . 40 ASP B N   603 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . ASP B 1 40 . 40 ASP B CA  604 nan 1.0 ?  nan nan nan 1
+ATOM C C   . ASP B 1 40 . 40 ASP B C   605 nan 1.0 ?  nan nan nan 1
+ATOM O O   . ASP B 1 40 . 40 ASP B O   606 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . ASP B 1 40 . 40 ASP B CB  607 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . ASP B 1 40 . 40 ASP B CG  608 nan 1.0 ?  nan nan nan 1
+ATOM O OD1 . ASP B 1 40 . 40 ASP B OD1 609 nan 1.0 ?  nan nan nan 1
+ATOM O OD2 . ASP B 1 40 . 40 ASP B OD2 610 nan 1.0 ?  nan nan nan 1
+ATOM N N   . GLY B 1 41 . 41 GLY B N   616 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . GLY B 1 41 . 41 GLY B CA  617 nan 1.0 ?  nan nan nan 1
+ATOM C C   . GLY B 1 41 . 41 GLY B C   618 nan 1.0 ?  nan nan nan 1
+ATOM O O   . GLY B 1 41 . 41 GLY B O   619 nan 1.0 ?  nan nan nan 1
+ATOM N N   . GLU B 1 42 . 42 GLU B N   623 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . GLU B 1 42 . 42 GLU B CA  624 nan 1.0 ?  nan nan nan 1
+ATOM C C   . GLU B 1 42 . 42 GLU B C   625 nan 1.0 ?  nan nan nan 1
+ATOM O O   . GLU B 1 42 . 42 GLU B O   626 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . GLU B 1 42 . 42 GLU B CB  627 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . GLU B 1 42 . 42 GLU B CG  628 nan 1.0 ?  nan nan nan 1
+ATOM C CD  . GLU B 1 42 . 42 GLU B CD  629 nan 1.0 ?  nan nan nan 1
+ATOM O OE1 . GLU B 1 42 . 42 GLU B OE1 630 nan 1.0 ?  nan nan nan 1
+ATOM O OE2 . GLU B 1 42 . 42 GLU B OE2 631 nan 1.0 ?  nan nan nan 1
+ATOM N N   . TRP B 1 43 . 43 TRP B N   639 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . TRP B 1 43 . 43 TRP B CA  640 nan 1.0 ?  nan nan nan 1
+ATOM C C   . TRP B 1 43 . 43 TRP B C   641 nan 1.0 ?  nan nan nan 1
+ATOM O O   . TRP B 1 43 . 43 TRP B O   642 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . TRP B 1 43 . 43 TRP B CB  643 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . TRP B 1 43 . 43 TRP B CG  644 nan 1.0 ?  nan nan nan 1
+ATOM C CD1 . TRP B 1 43 . 43 TRP B CD1 645 nan 1.0 ?  nan nan nan 1
+ATOM C CD2 . TRP B 1 43 . 43 TRP B CD2 646 nan 1.0 ?  nan nan nan 1
+ATOM N NE1 . TRP B 1 43 . 43 TRP B NE1 647 nan 1.0 ?  nan nan nan 1
+ATOM C CE2 . TRP B 1 43 . 43 TRP B CE2 648 nan 1.0 ?  nan nan nan 1
+ATOM C CE3 . TRP B 1 43 . 43 TRP B CE3 649 nan 1.0 ?  nan nan nan 1
+ATOM C CZ2 . TRP B 1 43 . 43 TRP B CZ2 650 nan 1.0 ?  nan nan nan 1
+ATOM C CZ3 . TRP B 1 43 . 43 TRP B CZ3 651 nan 1.0 ?  nan nan nan 1
+ATOM C CH2 . TRP B 1 43 . 43 TRP B CH2 652 nan 1.0 ?  nan nan nan 1
+ATOM N N   . THR B 1 44 . 44 THR B N   663 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . THR B 1 44 . 44 THR B CA  664 nan 1.0 ?  nan nan nan 1
+ATOM C C   . THR B 1 44 . 44 THR B C   665 nan 1.0 ?  nan nan nan 1
+ATOM O O   . THR B 1 44 . 44 THR B O   666 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . THR B 1 44 . 44 THR B CB  667 nan 1.0 ?  nan nan nan 1
+ATOM O OG1 . THR B 1 44 . 44 THR B OG1 668 nan 1.0 ?  nan nan nan 1
+ATOM C CG2 . THR B 1 44 . 44 THR B CG2 669 nan 1.0 ?  nan nan nan 1
+ATOM N N   . TYR B 1 45 . 45 TYR B N   677 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . TYR B 1 45 . 45 TYR B CA  678 nan 1.0 ?  nan nan nan 1
+ATOM C C   . TYR B 1 45 . 45 TYR B C   679 nan 1.0 ?  nan nan nan 1
+ATOM O O   . TYR B 1 45 . 45 TYR B O   680 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . TYR B 1 45 . 45 TYR B CB  681 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . TYR B 1 45 . 45 TYR B CG  682 nan 1.0 ?  nan nan nan 1
+ATOM C CD1 . TYR B 1 45 . 45 TYR B CD1 683 nan 1.0 ?  nan nan nan 1
+ATOM C CD2 . TYR B 1 45 . 45 TYR B CD2 684 nan 1.0 ?  nan nan nan 1
+ATOM C CE1 . TYR B 1 45 . 45 TYR B CE1 685 nan 1.0 ?  nan nan nan 1
+ATOM C CE2 . TYR B 1 45 . 45 TYR B CE2 686 nan 1.0 ?  nan nan nan 1
+ATOM C CZ  . TYR B 1 45 . 45 TYR B CZ  687 nan 1.0 ?  nan nan nan 1
+ATOM O OH  . TYR B 1 45 . 45 TYR B OH  688 nan 1.0 ?  nan nan nan 1
+ATOM N N   . ASP B 1 46 . 46 ASP B N   698 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . ASP B 1 46 . 46 ASP B CA  699 nan 1.0 ?  nan nan nan 1
+ATOM C C   . ASP B 1 46 . 46 ASP B C   700 nan 1.0 ?  nan nan nan 1
+ATOM O O   . ASP B 1 46 . 46 ASP B O   701 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . ASP B 1 46 . 46 ASP B CB  702 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . ASP B 1 46 . 46 ASP B CG  703 nan 1.0 ?  nan nan nan 1
+ATOM O OD1 . ASP B 1 46 . 46 ASP B OD1 704 nan 1.0 ?  nan nan nan 1
+ATOM O OD2 . ASP B 1 46 . 46 ASP B OD2 705 nan 1.0 ?  nan nan nan 1
+ATOM N N   . ASP B 1 47 . 47 ASP B N   711 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . ASP B 1 47 . 47 ASP B CA  712 nan 1.0 ?  nan nan nan 1
+ATOM C C   . ASP B 1 47 . 47 ASP B C   713 nan 1.0 ?  nan nan nan 1
+ATOM O O   . ASP B 1 47 . 47 ASP B O   714 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . ASP B 1 47 . 47 ASP B CB  715 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . ASP B 1 47 . 47 ASP B CG  716 nan 1.0 ?  nan nan nan 1
+ATOM O OD1 . ASP B 1 47 . 47 ASP B OD1 717 nan 1.0 ?  nan nan nan 1
+ATOM O OD2 . ASP B 1 47 . 47 ASP B OD2 718 nan 1.0 ?  nan nan nan 1
+ATOM N N   . ALA B 1 48 . 48 ALA B N   724 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . ALA B 1 48 . 48 ALA B CA  725 nan 1.0 ?  nan nan nan 1
+ATOM C C   . ALA B 1 48 . 48 ALA B C   726 nan 1.0 ?  nan nan nan 1
+ATOM O O   . ALA B 1 48 . 48 ALA B O   727 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . ALA B 1 48 . 48 ALA B CB  728 nan 1.0 ?  nan nan nan 1
+ATOM N N   . THR B 1 49 . 49 THR B N   734 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . THR B 1 49 . 49 THR B CA  735 nan 1.0 ?  nan nan nan 1
+ATOM C C   . THR B 1 49 . 49 THR B C   736 nan 1.0 ?  nan nan nan 1
+ATOM O O   . THR B 1 49 . 49 THR B O   737 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . THR B 1 49 . 49 THR B CB  738 nan 1.0 ?  nan nan nan 1
+ATOM O OG1 . THR B 1 49 . 49 THR B OG1 739 nan 1.0 ?  nan nan nan 1
+ATOM C CG2 . THR B 1 49 . 49 THR B CG2 740 nan 1.0 ?  nan nan nan 1
+ATOM N N   . LYS B 1 50 . 50 LYS B N   748 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . LYS B 1 50 . 50 LYS B CA  749 nan 1.0 ?  nan nan nan 1
+ATOM C C   . LYS B 1 50 . 50 LYS B C   750 nan 1.0 ?  nan nan nan 1
+ATOM O O   . LYS B 1 50 . 50 LYS B O   751 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . LYS B 1 50 . 50 LYS B CB  752 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . LYS B 1 50 . 50 LYS B CG  753 nan 1.0 ?  nan nan nan 1
+ATOM C CD  . LYS B 1 50 . 50 LYS B CD  754 nan 1.0 ?  nan nan nan 1
+ATOM C CE  . LYS B 1 50 . 50 LYS B CE  755 nan 1.0 ?  nan nan nan 1
+ATOM N NZ  . LYS B 1 50 . 50 LYS B NZ  756 nan 1.0 +1 nan nan nan 1
+ATOM N N   . THR B 1 51 . 51 THR B N   770 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . THR B 1 51 . 51 THR B CA  771 nan 1.0 ?  nan nan nan 1
+ATOM C C   . THR B 1 51 . 51 THR B C   772 nan 1.0 ?  nan nan nan 1
+ATOM O O   . THR B 1 51 . 51 THR B O   773 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . THR B 1 51 . 51 THR B CB  774 nan 1.0 ?  nan nan nan 1
+ATOM O OG1 . THR B 1 51 . 51 THR B OG1 775 nan 1.0 ?  nan nan nan 1
+ATOM C CG2 . THR B 1 51 . 51 THR B CG2 776 nan 1.0 ?  nan nan nan 1
+ATOM N N   . PHE B 1 52 . 52 PHE B N   784 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . PHE B 1 52 . 52 PHE B CA  785 nan 1.0 ?  nan nan nan 1
+ATOM C C   . PHE B 1 52 . 52 PHE B C   786 nan 1.0 ?  nan nan nan 1
+ATOM O O   . PHE B 1 52 . 52 PHE B O   787 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . PHE B 1 52 . 52 PHE B CB  788 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . PHE B 1 52 . 52 PHE B CG  789 nan 1.0 ?  nan nan nan 1
+ATOM C CD1 . PHE B 1 52 . 52 PHE B CD1 790 nan 1.0 ?  nan nan nan 1
+ATOM C CD2 . PHE B 1 52 . 52 PHE B CD2 791 nan 1.0 ?  nan nan nan 1
+ATOM C CE1 . PHE B 1 52 . 52 PHE B CE1 792 nan 1.0 ?  nan nan nan 1
+ATOM C CE2 . PHE B 1 52 . 52 PHE B CE2 793 nan 1.0 ?  nan nan nan 1
+ATOM C CZ  . PHE B 1 52 . 52 PHE B CZ  794 nan 1.0 ?  nan nan nan 1
+ATOM N N   . THR B 1 53 . 53 THR B N   804 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . THR B 1 53 . 53 THR B CA  805 nan 1.0 ?  nan nan nan 1
+ATOM C C   . THR B 1 53 . 53 THR B C   806 nan 1.0 ?  nan nan nan 1
+ATOM O O   . THR B 1 53 . 53 THR B O   807 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . THR B 1 53 . 53 THR B CB  808 nan 1.0 ?  nan nan nan 1
+ATOM O OG1 . THR B 1 53 . 53 THR B OG1 809 nan 1.0 ?  nan nan nan 1
+ATOM C CG2 . THR B 1 53 . 53 THR B CG2 810 nan 1.0 ?  nan nan nan 1
+ATOM N N   . VAL B 1 54 . 54 VAL B N   818 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . VAL B 1 54 . 54 VAL B CA  819 nan 1.0 ?  nan nan nan 1
+ATOM C C   . VAL B 1 54 . 54 VAL B C   820 nan 1.0 ?  nan nan nan 1
+ATOM O O   . VAL B 1 54 . 54 VAL B O   821 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . VAL B 1 54 . 54 VAL B CB  822 nan 1.0 ?  nan nan nan 1
+ATOM C CG1 . VAL B 1 54 . 54 VAL B CG1 823 nan 1.0 ?  nan nan nan 1
+ATOM C CG2 . VAL B 1 54 . 54 VAL B CG2 824 nan 1.0 ?  nan nan nan 1
+ATOM N N   . THR B 1 55 . 55 THR B N   834 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . THR B 1 55 . 55 THR B CA  835 nan 1.0 ?  nan nan nan 1
+ATOM C C   . THR B 1 55 . 55 THR B C   836 nan 1.0 ?  nan nan nan 1
+ATOM O O   . THR B 1 55 . 55 THR B O   837 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . THR B 1 55 . 55 THR B CB  838 nan 1.0 ?  nan nan nan 1
+ATOM O OG1 . THR B 1 55 . 55 THR B OG1 839 nan 1.0 ?  nan nan nan 1
+ATOM C CG2 . THR B 1 55 . 55 THR B CG2 840 nan 1.0 ?  nan nan nan 1
+ATOM N N   . GLU B 1 56 . 56 GLU B N   848 nan 1.0 ?  nan nan nan 1
+ATOM C CA  . GLU B 1 56 . 56 GLU B CA  849 nan 1.0 ?  nan nan nan 1
+ATOM C C   . GLU B 1 56 . 56 GLU B C   850 nan 1.0 ?  nan nan nan 1
+ATOM O O   . GLU B 1 56 . 56 GLU B O   851 nan 1.0 ?  nan nan nan 1
+ATOM C CB  . GLU B 1 56 . 56 GLU B CB  852 nan 1.0 ?  nan nan nan 1
+ATOM C CG  . GLU B 1 56 . 56 GLU B CG  853 nan 1.0 ?  nan nan nan 1
+ATOM C CD  . GLU B 1 56 . 56 GLU B CD  854 nan 1.0 ?  nan nan nan 1
+ATOM O OE1 . GLU B 1 56 . 56 GLU B OE1 855 nan 1.0 ?  nan nan nan 1
+ATOM O OE2 . GLU B 1 56 . 56 GLU B OE2 856 nan 1.0 ?  nan nan nan 1
+ATOM O OXT . GLU B 1 56 . 56 GLU B OXT 857 nan 1.0 ?  nan nan nan 1
+#

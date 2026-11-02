@@ -8,6 +8,8 @@ from pydantic import (
     ConfigDict,
     Field,
 )
+from rfd3na._core.utils.components import fetch_mask_from_component
+from rfd3na._core.utils.ddp import RankedLogger
 from rfd3na.inference.symmetry.atom_array import (
     FIXED_ENTITY_ID,
     FIXED_TRANSFORM_ID,
@@ -31,9 +33,6 @@ from rfd3na.inference.symmetry.frames import (
     get_symmetry_frames_from_symmetry_id,
 )
 from rfd3na.transforms.conditioning_base import get_motif_features
-
-from foundry.utils.components import fetch_mask_from_component
-from foundry.utils.ddp import RankedLogger
 
 ranked_logger = RankedLogger(__name__, rank_zero_only=True)
 
@@ -86,6 +85,10 @@ def make_symmetric_atom_array(
     sym_conf = check_symmetry_config(
         asu_atom_array, sym_conf, sm, has_dist_cond, src_atom_array=src_atom_array
     )
+    # `check_symmetry_config` is untyped (annotating its SymmetryConfig param/return
+    # would be a circular import via checks.py), so mypy widens sym_conf back to the
+    # `SymmetryConfig | dict` union; re-narrow it here.
+    assert isinstance(sym_conf, SymmetryConfig)
     # Adding utility annotations to the asu atom array
     asu_atom_array = _add_util_annotations(asu_atom_array, sym_conf, sm)
 

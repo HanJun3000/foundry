@@ -1,0 +1,26 @@
+# Run from models/rfo after completing docs/installation.md.
+input_structure: ./src/rfo/cycling/examples/example_complex.cif
+out_dir: ./outputs/example
+backprop_fraction: 0.5
+total_cycles: 10
+mpnn_num_seqs: 1
+mpnn_temperature: 0.1
+seed: 42
+
+# Optional conditioning:
+# af3_json_template: /path/to/complex.json
+# loss: pae_interface_mean
+# msa_paths:
+#   B: /path/to/target.a3m
+# templates:
+#   B: /path/to/target.cif
+
+# Export MPNN_REPO, MPNN_PYTHON, RF3_CKPT, and BOLTZ_EXECUTABLE, or
+# uncomment this block and replace the paths. Explicit assets override env.
+# assets:
+#   mpnn_repo: /path/to/LigandMPNN
+#   mpnn_python: /path/to/ligandmpnn-env/bin/python
+#   mpnn_model_type: protein_mpnn
+#   rf3_ckpt: /path/to/rf3_checkpoint.ckpt
+#   boltz_executable: /path/to/boltz-env/bin/boltz
+#   boltz_cache: /path/to/boltz-cache

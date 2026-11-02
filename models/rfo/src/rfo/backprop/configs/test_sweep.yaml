@@ -1,0 +1,47 @@
+# Configuration for testing Sweep algorithm with SequenceOptimizer
+algorithm: sweep
+algorithm_config:
+  delta: 0.0
+  batch_eval: false
+
+# Model and checkpoint
+checkpoint_path: /path/to/modelhub_af3_with_confidence_ep804.ckpt
+n_recycles: 10
+diffusion_batch_size: 1
+num_steps: 50
+
+# Input/output paths
+input: /path/to/protein_binder_case.pdb
+output_path: ./outputs/test_sweep
+
+# MSA options
+use_msa: false
+msa_paths: null
+msa_chain: null
+
+# Optimization parameters
+opt_steps:
+  total_steps: 10  # Maximum number of mutations to try
+
+lr: 0.01
+
+# Optimization targets
+optimize_binder: true
+interface_only: false
+
+# Template options
+self_template: false
+
+# Optional: process only first file for testing
+process_first_only: false
+
+# Loss configuration - using default distogram CCE from base optimizer
+# To use custom loss functions, you would need to implement them in your optimizer
+# Example loss configuration (requires implementation):
+# loss:
+#   inter_contact:
+#     _target_: rfo.backprop.tools.loss.ContactLoss
+#     contact_type: "inter"
+#     cutoff: 20.0
+#     k: 1
+#     weight: 1.0 

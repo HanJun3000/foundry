@@ -9,7 +9,7 @@ app = typer.Typer()
 @app.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True}
 )
-def design(ctx: typer.Context):
+def design(ctx: typer.Context) -> None:
     """Run design using hydra config overrides and input files."""
     # Find the RFD3 configs directory relative to this file
     # Development: models/rfd3/src/rfd3/cli.py -> models/rfd3/configs/
@@ -36,7 +36,7 @@ def design(ctx: typer.Context):
         cfg = compose(config_name="inference", overrides=args)
 
         # Lazy import to avoid loading heavy dependencies at CLI startup
-        from foundry.utils.logging import suppress_warnings
+        from rfd3._core.utils.logging import suppress_warnings
         from rfd3.run_inference import run_inference
 
         with suppress_warnings(is_inference=True):

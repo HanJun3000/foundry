@@ -4,14 +4,13 @@ from pathlib import Path
 
 from atomworks.ml.example_id import parse_example_id
 from beartype.typing import Any, Literal
+from rfd3na._core.callbacks.callback import BaseCallback
+from rfd3na._core.utils.ddp import RankedLogger
 from rfd3na.utils.io import (
     dump_metadata,
     dump_structures,
     dump_trajectories,
 )
-
-from foundry.callbacks.callback import BaseCallback
-from foundry.utils.ddp import RankedLogger
 
 ranked_logger = RankedLogger(__name__, rank_zero_only=True)
 
@@ -58,7 +57,7 @@ class DumpValidationStructuresCallback(BaseCallback):
         example_id,
         dir: str,
         extra: str = "",
-        epoch: str = None,
+        epoch: str | None = None,
         dataset_name: str = "",
     ) -> Path:
         """Helper function to build a path from a training or validation example_id."""
@@ -76,7 +75,9 @@ class DumpValidationStructuresCallback(BaseCallback):
             self.save_dir / dir / f"{epoch_str}" / dataset_name / f"{identifier}{extra}"
         )
 
-    def on_validation_batch_end(
+    # Fabric dispatches this hook by keyword; the base BaseCallback declares positional
+    # params, so the keyword-only override is intentional (same as the foundry callbacks).
+    def on_validation_batch_end(  # type: ignore[override]
         self,
         *,
         trainer,

@@ -1,0 +1,81 @@
+# Gaurav Binder Random Sequence Configuration
+# Replicates the parameters from run_gaurav_binder_optimizer_random_9.sh
+
+# Algorithm configuration
+algorithm: gradient_mcmc
+algorithm_config:
+  mutate_each: 1
+  random_mut: false
+  opt_steps:
+    total_steps: 5
+    T_init: 1.0
+    half_life: 2
+  save_accept: false
+  # Multi-checkpoint strategies (ignored when only one checkpoint is provided)
+  #   gradient_strategy:  single | random | average
+  #     single  -- always use the first checkpoint (default, original behaviour)
+  #     random  -- randomly pick one checkpoint per step (BindCraft-style)
+  #     average -- forward+backward through all checkpoints, average the gradients
+  gradient_strategy: single
+  #   acceptance_strategy:  mcmc_majority | simple_majority
+  #     mcmc_majority   -- per-model MH vote, accept if majority votes accept (default)
+  #     simple_majority -- accept if majority of models show loss improvement (no temperature)
+  acceptance_strategy: mcmc_majority
+
+# Input/Output paths (from the shell script)
+input: './inputs/gaurav.json'
+output_path: './outputs/gaurav_random/9'
+
+# Model and checkpoint configuration
+# Single checkpoint (backward compatible):
+#   checkpoint_path: /path/to/single.ckpt
+# Multiple checkpoints (consensus):
+#   checkpoint_paths:
+#     - /path/to/ckpt1.ckpt
+#     - /path/to/ckpt2.ckpt
+checkpoint_path: 
+    - /path/to/rf3_run11conf_ep0694.ckpt
+    - /path/to/rf3_run11conf_ep0699.ckpt
+    - /path/to/rf3_run11conf_ep0713.ckpt
+n_recycles: 10
+diffusion_batch_size: 1
+
+# Optimization parameters
+lr: 0.01
+max_mut: 5
+
+# PPI-specific optimization targets
+optimize_binder: true
+interface_only: false
+
+# Template configuration
+self_template: false
+self_template_selection_syntax: null
+fix_template_dict:
+  # From shell script: --fix_template '{"B": "/path/to/chainB.pdb"}'
+  # B: "/path/to/chainB.pdb"
+  null
+
+# MSA configuration
+msa_paths:
+  # From shell script: --msa_paths '{"B": "/path/to/B_unpaired_msa.a3m"}'
+  # B: "/path/to/B_unpaired_msa.a3m"
+  null
+
+# Random sequence initialization (from shell script: --random_seq --random_seq_length 18)
+random_seq: true
+random_seq_length: 18  # Fixed length for chain A
+
+# Mutation constraints
+allowed_mut_pos: ""  # No specific constraints in the shell script
+
+# Loss function configuration
+# Using default contact loss for binder optimization
+loss_type: 'pae_interface_mean'
+# loss_type: 'sum_contact_loss'
+
+# Legacy loss configuration (not needed with simplified approach)
+loss:
+  weights:
+    ContactLoss_inter: 1.0
+    ContactLoss_intra: 1.0

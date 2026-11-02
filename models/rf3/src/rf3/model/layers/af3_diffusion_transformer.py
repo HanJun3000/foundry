@@ -1,6 +1,13 @@
 import numpy as np
 import torch
 import torch.nn as nn
+from rf3._core.model.layers.attention import (
+    dense_pair_attention,
+    use_dense_sdpa,
+    validate_attention_backend,
+)
+from rf3._core.training.checkpoint import activation_checkpointing
+from rf3._core.utils.torch import device_of, scatter_mean
 from rf3.loss.loss import calc_chiral_grads_flat_impl
 from rf3.model.layers.layer_utils import (
     AdaLN,
@@ -10,9 +17,6 @@ from rf3.model.layers.layer_utils import (
     linearNoBias,
 )
 from rf3.model.layers.mlff import ConformerEmbeddingWeightedAverage
-
-from foundry.training.checkpoint import activation_checkpointing
-from foundry.utils.torch import device_of, scatter_mean
 
 
 class AtomAttentionEncoderDiffusion(nn.Module):
@@ -376,7 +380,9 @@ class ConditionedTransitionBlock(nn.Module):
 
 
 class AttentionPairBiasDiffusion(nn.Module):
-    def __init__(self, c_a, c_s, c_pair, n_head, kq_norm):
+    def __init__(
+        self, c_a, c_s, c_pair, n_head, kq_norm, dense_attention_backend="auto"
+    ):
         super().__init__()
         self.n_head = n_head
         self.c_a = c_a
@@ -400,6 +406,9 @@ class AttentionPairBiasDiffusion(nn.Module):
         self.ada_ln_1 = AdaLN(c_a=c_a, c_s=c_s)
         self.use_deepspeed_evo = False
         self.force_bfloat16 = True
+        self.dense_attention_backend = validate_attention_backend(
+            dense_attention_backend
+        )
 
         self.kq_norm = kq_norm
         if self.kq_norm:
@@ -423,7 +432,11 @@ class AttentionPairBiasDiffusion(nn.Module):
             # zero out layer norms for the key and query
             return self.atom_attention(A_I, S_I, Z_II)
 
-        if (self.use_deepspeed_evo or self.force_bfloat16) and A_I.device.type != "mps":
+        # Local float32 inference must match the projection weights' dtype.
+        if (self.use_deepspeed_evo or self.force_bfloat16) and A_I.device.type not in {
+            "cpu",
+            "mps",
+        }:
             A_I = A_I.to(torch.bfloat16)
             assert len(A_I.shape) == 3, f"(Diffusion batch, I, C_a) but got {A_I.shape}"
 
@@ -443,7 +456,17 @@ class AttentionPairBiasDiffusion(nn.Module):
 
         _, L = B_IIH.shape[:2]
 
-        if not self.use_deepspeed_evo or L <= 24:
+        if use_dense_sdpa(self, Q_IH):
+            Q_IH = Q_IH / np.sqrt(self.c)
+            A_I = dense_pair_attention(
+                Q_IH.transpose(-3, -2),
+                K_IH.transpose(-3, -2),
+                V_IH.transpose(-3, -2),
+                B_IIH.movedim(-1, -3),
+                scale=1.0,
+            ).transpose(-3, -2)
+            A_I = (G_IH * A_I).flatten(start_dim=-2)
+        elif not self.use_deepspeed_evo or L <= 24:
             # Attention
             Q_IH = Q_IH / np.sqrt(self.c)
             A_IIH = torch.softmax(

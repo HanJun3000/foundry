@@ -1,0 +1,57 @@
+# Configuration for testing Cascade algorithm with SequenceOptimizer
+algorithm: cascade
+algorithm_config:
+  n_cycles: 1  # Single cycle (set >1 for multiple evolution cycles)
+  enable_semigreedy: true  # Enable semi-greedy phase after evolution
+
+# Model and checkpoint
+checkpoint_path: /path/to/modelhub_af3_with_confidence_ep804.ckpt
+n_recycles: 10
+diffusion_batch_size: 1
+num_steps: 20
+
+# Input/output paths
+input: /path/to/protein_binder_case.pdb
+output_path: ./outputs/test_cascade
+
+# MSA options
+use_msa: false
+msa_paths: null
+msa_chain: null
+
+# Optimization phases configuration
+opt_steps:
+  logits:
+    total_steps: 5
+    temp: 1
+    prot_dim: 20
+  soft:
+    total_steps: 5
+    temp_start: 1
+    temp_end: 0.01
+    prot_dim: 20
+  hard:
+    total_steps: 5
+    temp_start: 1
+    temp_end: 0.01
+    prot_dim: 20
+  semigreedy:  # Optional phase
+    total_steps: 5
+    try_each: 5
+    random_mut: false
+
+lr: 0.01
+max_mut: 5
+
+# Optimization targets
+optimize_binder: true
+interface_only: false
+
+# Template options
+self_template: false
+
+# Optional: process only first file for testing
+process_first_only: false
+
+# Loss configuration - using default distogram CCE from base optimizer
+# To use custom loss functions, you would need to implement them in your optimizer 

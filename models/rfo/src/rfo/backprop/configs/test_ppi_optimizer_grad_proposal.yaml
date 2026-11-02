@@ -1,0 +1,46 @@
+# Configuration for testing PPI optimizer with modular algorithms
+algorithm: gradient_proposal  # gradient_mcmc, sweep, cascade
+algorithm_config:
+  opt_steps:
+    total_steps: 40
+    k_mut_each_round: 3
+  pool_threshold_grad: 0.04
+  pool_min_cands: 3
+
+# Model and checkpoint
+checkpoint_path: /path/to/modelhub_af3_with_confidence_ep804.ckpt
+n_recycles: 10
+diffusion_batch_size: 1
+
+lr: 0.01
+max_mut: 5
+# for cascade only
+n_cycles: 1
+enable_semigreedy: true
+
+# PPI-specific optimization targets
+optimize_binder: true
+interface_only: false
+
+# Template options
+self_template: false
+
+# Loss configuration for PPI optimization
+loss:
+  weights:
+    ContactLoss_inter: 1.0
+    ContactLoss_intra: 1.0
+
+loss_config:
+  ContactLoss:
+    - _name: inter_contact
+      contact_type: inter
+      cutoff: 22.0
+      k: 1
+      weight_by_name: ContactLoss_inter
+    - _name: intra_contact
+      contact_type: intra
+      cutoff: 14.0
+      k: 2
+      min_seq_sep: 9
+      weight_by_name: ContactLoss_intra

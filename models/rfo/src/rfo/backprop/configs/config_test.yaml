@@ -1,0 +1,56 @@
+# Example config for running optimization with config file only
+# Usage: python ppi_optimizer_gradmcmc.py --config_name config_only_example
+
+# Input and output paths
+input: /path/to/results_part1_-_ideal-tests_hotspots_loop-0.05_-_for_ideal_tests_ep14_-_pdb2awh.ent_A_2-atomized-bb-False_mpnn001_af2pred.pdb
+output_path: ./outputs/config_only_test
+
+# MSA paths (optional, can be dict or CSV file path)
+msa_paths: null
+
+# Model and checkpoint
+checkpoint_path: /path/to/modelhub_af3_with_confidence_ep804.ckpt
+n_recycles: 10
+diffusion_batch_size: 1
+
+# Optimization algorithm
+algorithm: gradient_mcmc
+algorithm_config:
+  mutate_each: 1
+  random_mut: false
+  opt_steps:
+    total_steps: 50
+    T_init: 1.0
+    half_life: 25
+  save_accept: true
+
+# Optimization parameters
+lr: 0.01
+max_mut: 5
+
+# PPI-specific targets
+optimize_binder: true
+interface_only: false
+
+# Template options
+self_template: false
+
+# Loss configuration for PPI optimization
+loss:
+  weights:
+    ContactLoss_inter: 1.0
+    ContactLoss_intra: 1.0
+
+loss_config:
+  ContactLoss:
+    - _name: inter_contact
+      contact_type: inter
+      cutoff: 22.0
+      k: 1
+      weight_by_name: ContactLoss_inter
+    - _name: intra_contact
+      contact_type: intra
+      cutoff: 14.0
+      k: 2
+      min_seq_sep: 9
+      weight_by_name: ContactLoss_intra 

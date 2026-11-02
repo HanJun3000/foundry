@@ -10,9 +10,7 @@ import biotite.structure as struc
 import numpy as np
 from atomworks import parse
 from atomworks.constants import STANDARD_AA, STANDARD_DNA
-from atomworks.io.parser import (
-    STANDARD_PARSER_ARGS,
-)
+from atomworks.io.config import ParseConfig, get_config
 from atomworks.ml.encoding_definitions import AF3SequenceEncoding
 from atomworks.ml.preprocessing.utils.structure_utils import (
     get_atom_mask_from_cell_list,
@@ -21,6 +19,13 @@ from atomworks.ml.utils.token import (
     get_token_starts,
     spread_token_wise,
 )
+from rfd3na._core.common import exists
+from rfd3na._core.utils.components import (
+    fetch_mask_from_component,
+    get_name_mask,
+    unravel_components,
+)
+from rfd3na._core.utils.ddp import RankedLogger
 from rfd3na.constants import (
     REQUIRED_CONDITIONING_ANNOTATIONS,
 )
@@ -29,14 +34,6 @@ from rfd3na.transforms.conditioning_base import (
     set_default_conditioning_annotations,
 )
 from rfd3na.transforms.conditioning_utils import sample_island_tokens
-
-from foundry.common import exists
-from foundry.utils.components import (
-    fetch_mask_from_component,
-    get_name_mask,
-    unravel_components,
-)
-from foundry.utils.ddp import RankedLogger
 
 logging.basicConfig(level=logging.INFO)
 ranked_logger = RankedLogger(__name__, rank_zero_only=True)
@@ -57,7 +54,7 @@ def set_common_annotations(array, set_src_component_to_res_name=True):
     if "b_factor" not in annots:
         array.set_annotation("b_factor", np.zeros(array.shape[0], dtype=float))
     if "charge" not in annots:
-        array.set_annotation("charge", np.zeros(array.shape[0], dtype=float))
+        array.set_annotation("charge", np.zeros(array.shape[0], dtype=np.int8))
     if "src_component" not in annots:
         if set_src_component_to_res_name:
             array.set_annotation(
@@ -220,7 +217,7 @@ def _restore_bonds_for_nonstandard_residues(
                     np.array(bonds_to_add, dtype=np.int64),
                 )
                 atom_array_accum.bonds = atom_array_accum.bonds.merge(new_bonds)
-                logger.info(
+                ranked_logger.info(
                     f"Preserved {len(bonds_to_add)} inter-residue bonds involving non-standard residues from source structure"
                 )
 
@@ -261,7 +258,7 @@ def _restore_bonds_for_nonstandard_residues(
             # This is expected for some atomized residues or ligands at chain termini
             if curr_is_nonstandard and next_is_nonstandard:
                 # Both are non-standard but no C in current - might be an atomized region without proper termini
-                logger.debug(
+                ranked_logger.debug(
                     f"Non-standard residue {curr_residue.res_name[0]} (res_id {curr_residue.res_id[0]}) "
                     f"has no C atom - cannot form backbone bond to next residue"
                 )
@@ -275,7 +272,7 @@ def _restore_bonds_for_nonstandard_residues(
             # This is expected for some atomized residues or ligands at chain termini
             if curr_is_nonstandard and next_is_nonstandard:
                 # Both are non-standard but no N in next - might be an atomized region without proper termini
-                logger.debug(
+                ranked_logger.debug(
                     f"Non-standard residue {next_residue.res_name[0]} (res_id {next_residue.res_id[0]}) "
                     f"has no N atom - cannot form backbone bond from previous residue"
                 )
@@ -301,7 +298,7 @@ def _restore_bonds_for_nonstandard_residues(
             atom_array_accum.array_length(), np.array(bonds_to_add, dtype=np.int64)
         )
         atom_array_accum.bonds = atom_array_accum.bonds.merge(new_bonds)
-        logger.info(
+        ranked_logger.info(
             f"Added {len(bonds_to_add)} backbone bonds involving non-standard residues"
         )
 
@@ -317,8 +314,7 @@ def inference_load_(
     file: PathLike, *, assembly_id: str = "1", cif_parser_args: dict | None = None
 ):
     # Default cif_parser_args to an empty dictionary if not provided
-    if cif_parser_args is None:
-        cif_parser_args = {}
+    cif_parser_args = dict(cif_parser_args or {})
 
     # Convenience utilities to default to loading from and saving to cache if a cache_dir is provided, unless explicitly overridden
     if "cache_dir" in cif_parser_args and cif_parser_args["cache_dir"]:
@@ -326,7 +322,7 @@ def inference_load_(
         cif_parser_args.setdefault("save_to_cache", True)
 
     merged_cif_parser_args = {
-        **STANDARD_PARSER_ARGS,
+        **get_config("rcsb", cls=ParseConfig).to_dict(),
         **{
             "fix_arginines": False,
             "add_missing_atoms": False,
@@ -337,18 +333,17 @@ def inference_load_(
     merged_cif_parser_args["hydrogen_policy"] = "remove"
 
     # Ensure the required annotations can be loaded
-    merged_cif_parser_args["extra_fields"] = list(
-        set(
-            merged_cif_parser_args.get("extra_fields", [])
-            + REQUIRED_CONDITIONING_ANNOTATIONS
+    extra_fields = merged_cif_parser_args.get("extra_fields")
+    if extra_fields != "all":
+        merged_cif_parser_args["extra_fields"] = list(
+            dict.fromkeys(list(extra_fields or []) + REQUIRED_CONDITIONING_ANNOTATIONS)
         )
-    )
+    merged_cif_parser_args["build_assembly"] = (assembly_id,)
 
     # Use the parse function with the merged CIF parser arguments
     result_dict = parse(
-        filename=file,
-        build_assembly=(assembly_id,),  # Convert list to tuple (make hashable)
-        **merged_cif_parser_args,
+        file,
+        config=ParseConfig(**merged_cif_parser_args),
     )
 
     atom_array = result_dict["assemblies"][assembly_id][0]
@@ -462,7 +457,7 @@ def set_com(
     infer_ori_strategy: str | None = None,
     ori_jitter: float | None = None,
 ):
-    if exists(ori_token):
+    if ori_token is not None:
         center = np.array([float(x) for x in ori_token], dtype=atom_array.coord.dtype)
         atom_array.coord = atom_array.coord - center
         ranked_logger.info(f"Received ori_token argument. Setting origin as {center}.")
@@ -519,7 +514,7 @@ def set_com(
         direction /= np.linalg.norm(direction)
 
         # Random length (mean ~ scale)
-        length = np.random.exponential(scale=scale)
+        length = np.random.exponential(scale=ori_jitter)
         jittered_offset = direction * length
 
         atom_array.coord -= jittered_offset
@@ -580,7 +575,9 @@ def spoof_helical_bundle_ss_conditioning_fn(atom_array: struc.AtomArray):
 #################################################################################
 
 
-def generate_idealized_cb_position(N: np.array, Ca: np.array, C: np.array) -> np.array:
+def generate_idealized_cb_position(
+    N: np.ndarray, Ca: np.ndarray, C: np.ndarray
+) -> np.ndarray:
     """
     Generate Cb coordiantes given (N, CA, C) as if the given coordinates were from an idealized Alanine.
 

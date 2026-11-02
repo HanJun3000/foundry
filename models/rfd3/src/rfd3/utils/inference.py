@@ -10,9 +10,7 @@ import biotite.structure as struc
 import numpy as np
 from atomworks import parse
 from atomworks.constants import STANDARD_AA, STANDARD_DNA
-from atomworks.io.parser import (
-    STANDARD_PARSER_ARGS,
-)
+from atomworks.io.config import ParseConfig, get_config
 from atomworks.ml.encoding_definitions import AF3SequenceEncoding
 from atomworks.ml.preprocessing.utils.structure_utils import (
     get_atom_mask_from_cell_list,
@@ -21,6 +19,13 @@ from atomworks.ml.utils.token import (
     get_token_starts,
     spread_token_wise,
 )
+from rfd3._core.common import exists
+from rfd3._core.utils.components import (
+    fetch_mask_from_component,
+    get_name_mask,
+    unravel_components,
+)
+from rfd3._core.utils.ddp import RankedLogger
 from rfd3.constants import (
     REQUIRED_CONDITIONING_ANNOTATIONS,
 )
@@ -29,14 +34,6 @@ from rfd3.transforms.conditioning_base import (
     set_default_conditioning_annotations,
 )
 from rfd3.transforms.conditioning_utils import sample_island_tokens
-
-from foundry.common import exists
-from foundry.utils.components import (
-    fetch_mask_from_component,
-    get_name_mask,
-    unravel_components,
-)
-from foundry.utils.ddp import RankedLogger
 
 logging.basicConfig(level=logging.INFO)
 ranked_logger = RankedLogger(__name__, rank_zero_only=True)
@@ -57,7 +54,7 @@ def set_common_annotations(array, set_src_component_to_res_name=True):
     if "b_factor" not in annots:
         array.set_annotation("b_factor", np.zeros(array.shape[0], dtype=float))
     if "charge" not in annots:
-        array.set_annotation("charge", np.zeros(array.shape[0], dtype=float))
+        array.set_annotation("charge", np.zeros(array.shape[0], dtype=np.int8))
     if "src_component" not in annots:
         if set_src_component_to_res_name:
             array.set_annotation(
@@ -317,8 +314,7 @@ def inference_load_(
     file: PathLike, *, assembly_id: str = "1", cif_parser_args: dict | None = None
 ):
     # Default cif_parser_args to an empty dictionary if not provided
-    if cif_parser_args is None:
-        cif_parser_args = {}
+    cif_parser_args = dict(cif_parser_args or {})
 
     # Convenience utilities to default to loading from and saving to cache if a cache_dir is provided, unless explicitly overridden
     if "cache_dir" in cif_parser_args and cif_parser_args["cache_dir"]:
@@ -326,7 +322,7 @@ def inference_load_(
         cif_parser_args.setdefault("save_to_cache", True)
 
     merged_cif_parser_args = {
-        **STANDARD_PARSER_ARGS,
+        **get_config("rcsb", cls=ParseConfig).to_dict(),
         **{
             "fix_arginines": False,
             "add_missing_atoms": False,
@@ -337,18 +333,17 @@ def inference_load_(
     merged_cif_parser_args["hydrogen_policy"] = "remove"
 
     # Ensure the required annotations can be loaded
-    merged_cif_parser_args["extra_fields"] = list(
-        set(
-            merged_cif_parser_args.get("extra_fields", [])
-            + REQUIRED_CONDITIONING_ANNOTATIONS
+    extra_fields = merged_cif_parser_args.get("extra_fields")
+    if extra_fields != "all":
+        merged_cif_parser_args["extra_fields"] = list(
+            dict.fromkeys(list(extra_fields or []) + REQUIRED_CONDITIONING_ANNOTATIONS)
         )
-    )
+    merged_cif_parser_args["build_assembly"] = (assembly_id,)
 
     # Use the parse function with the merged CIF parser arguments
     result_dict = parse(
-        filename=file,
-        build_assembly=(assembly_id,),  # Convert list to tuple (make hashable)
-        **merged_cif_parser_args,
+        file,
+        config=ParseConfig(**merged_cif_parser_args),
     )
 
     atom_array = result_dict["assemblies"][assembly_id][0]

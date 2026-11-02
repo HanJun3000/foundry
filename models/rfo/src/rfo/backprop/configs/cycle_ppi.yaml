@@ -1,0 +1,30 @@
+# Default RF3-backprop config used by the cycling driver's RF3 branch.
+# The cycle overrides `input` and `output_path` per cycle; everything else
+# here defines the optimization. loss_type must be a confidence-based loss so
+# the optimizer runs diffusion and writes a predicted structure (modelhub_pred/)
+# that the next MPNN step consumes.
+algorithm: gradient_mcmc
+algorithm_config:
+  mutate_each: 1
+  random_mut: false
+  opt_steps:
+    total_steps: 5          # per-cycle optimization steps (bump up for production)
+    T_init: 1.0
+    half_life: 40
+  save_accept: false
+
+checkpoint_path: ${oc.env:RF3_CKPT}
+n_recycles: 10              # must match the optimizer's forward n_cycle (10)
+diffusion_batch_size: 1
+
+lr: 0.01
+max_mut: 5
+n_cycles: 1
+enable_semigreedy: true
+
+optimize_binder: true
+interface_only: false
+self_template: false
+
+# Confidence-based objective -> runs diffusion -> writes modelhub_pred/<step>.cif
+loss_type: pae_interface_mean

@@ -6,6 +6,11 @@ from biotite.structure.residues import get_residue_starts
 from einops import repeat
 from lightning_utilities import apply_to_collection
 from omegaconf import DictConfig
+from rfd3._core.metrics.losses import Loss
+from rfd3._core.metrics.metric import MetricManager
+from rfd3._core.trainers.fabric import FabricTrainer
+from rfd3._core.utils.ddp import RankedLogger
+from rfd3._core.utils.torch import assert_no_nans, assert_same_shape
 from rfd3.metrics.design_metrics import get_all_backbone_metrics
 from rfd3.metrics.hbonds_hbplus_metrics import get_hbond_metrics
 from rfd3.trainer.recycling import get_recycle_schedule
@@ -20,12 +25,6 @@ from rfd3.trainer.trainer_utils import (
 from rfd3.utils.io import (
     build_stack_from_atom_array_and_batched_coords,
 )
-
-from foundry.metrics.losses import Loss
-from foundry.metrics.metric import MetricManager
-from foundry.trainers.fabric import FabricTrainer
-from foundry.utils.ddp import RankedLogger
-from foundry.utils.torch import assert_no_nans, assert_same_shape
 
 global_logger = RankedLogger(__name__, rank_zero_only=False)
 
@@ -46,18 +45,18 @@ class AADesignTrainer(FabricTrainer):
 
     def __init__(
         self,
-        allow_sequence_outputs,
-        cleanup_guideposts,
-        cleanup_virtual_atoms,
-        read_sequence_from_sequence_head,
-        output_full_json,
-        association_scheme,
-        compute_non_clash_metrics_for_diffused_region_only=False,
-        seed=None,  # Deprecated
+        allow_sequence_outputs: bool,
+        cleanup_guideposts: bool,
+        cleanup_virtual_atoms: bool,
+        read_sequence_from_sequence_head: bool,
+        output_full_json: bool,
+        association_scheme: str,
+        compute_non_clash_metrics_for_diffused_region_only: bool = False,
+        seed: int | None = None,  # Deprecated
         n_recycles_train: int | None = None,
         loss: DictConfig | dict | None = None,
         metrics: DictConfig | dict | None = None,
-        **kwargs,
+        **kwargs: Any,
     ):
         super().__init__(**kwargs)
 
