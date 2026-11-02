@@ -1,5 +1,6 @@
 from collections import deque
 from contextlib import ExitStack
+from typing import TYPE_CHECKING
 
 import torch
 import torch.utils.checkpoint as checkpoint
@@ -17,6 +18,11 @@ from torch import nn
 
 from foundry.training.checkpoint import create_custom_forward
 from foundry.utils.torch import device_of
+
+if TYPE_CHECKING:
+    # Imported for typing only; the runtime import stays lazy (see `forward`) so the
+    # normal prediction path does not pull `rf3.data` into this module's import graph.
+    from rf3.data.score_structure import ScoringCoordinates
 
 """
 Shape Annotation Glossary:
@@ -363,8 +369,7 @@ class RF3WithConfidence(RF3):
         n_cycle: int,
         coord_atom_lvl_to_be_noised: torch.Tensor | None = None,
         should_early_stop_fn: ShouldEarlyStopFn | None = None,
-        X_score_L: torch.Tensor | None = None,
-        score_mask_L: torch.Tensor | None = None,
+        score_coordinates: "ScoringCoordinates | None" = None,
     ) -> dict:
         """Complete forward pass of the model with confidence head.
 
@@ -383,13 +388,12 @@ class RF3WithConfidence(RF3):
             should_early_stop_fn(Callable): Function that takes the confidence and trunk outputs after the first recycle and returns a boolean
                 indicating whether to stop early and a dictionary with additional information (e.g., value and threshold).
                 If None, no early stopping is performed. Optional; only used during inference.
-            X_score_L (torch.Tensor): Scoring mode. Atom-level coordinates [L, 3] of a given structure, in the
-                model's atom order, on which to evaluate the confidence head instead of on the model's own
-                diffusion samples. When `score_mask_L` covers every atom, the diffusion rollout is skipped
-                entirely; otherwise the rollout runs and the given atoms are overlaid onto each sample (see
+            score_coordinates (ScoringCoordinates): Scoring mode. Atom-level coordinates [L, 3] of a given
+                structure, in the model's atom order, plus a mask [L] of which atoms it provides, on which to
+                evaluate the confidence head instead of on the model's own diffusion samples. When the mask
+                covers every atom, the diffusion rollout is skipped entirely; otherwise the rollout runs and
+                the given atoms are overlaid onto each sample (see
                 `rf3.data.score_structure.overlay_score_coordinates`). Optional; inference only.
-            score_mask_L (torch.Tensor): Boolean mask [L] marking which atoms `X_score_L` provides. Required
-                when `X_score_L` is given.
 
         Returns:
             dict: Dictionary of model outputs, including:
@@ -413,11 +417,8 @@ class RF3WithConfidence(RF3):
                     input["f"][x] = input["f"][x].to(autocast_dtype)
 
         # ... scoring mode (evaluate the confidence head on a given structure)
-        is_scoring = X_score_L is not None
+        is_scoring = score_coordinates is not None
         if is_scoring:
-            assert (
-                score_mask_L is not None
-            ), "`score_mask_L` is required when `X_score_L` is given!"
             assert (
                 not self.training
             ), "Structure scoring is not supported during training!"
@@ -492,15 +493,17 @@ class RF3WithConfidence(RF3):
                         ),
                     )
                 )
-            elif is_scoring and bool(cast(torch.Tensor, score_mask_L).all()):
+            elif (
+                is_scoring and cast("ScoringCoordinates", score_coordinates).is_complete
+            ):
                 # Scoring mode, full coverage: the given structure already provides every
                 # model atom, so there is nothing for diffusion to add. Skip the rollout.
                 # (`repeat`, not `expand`: downstream consumers — symmetry resolution,
                 # the output writer, the b-factor annotation — write into this tensor,
                 # which a stride-0 view would alias across samples)
                 sample_diffusion_outs = {
-                    "X_L": cast(torch.Tensor, X_score_L)
-                    .unsqueeze(0)
+                    "X_L": cast("ScoringCoordinates", score_coordinates)
+                    .coords.unsqueeze(0)
                     .repeat(diffusion_batch_size, 1, 1),
                     "X_noisy_L_traj": [],
                     "X_denoised_L_traj": [],
@@ -532,10 +535,9 @@ class RF3WithConfidence(RF3):
                         overlay_score_coordinates,
                     )
 
+                    scoring = cast("ScoringCoordinates", score_coordinates)
                     sample_diffusion_outs["X_L"] = overlay_score_coordinates(
-                        sample_diffusion_outs["X_L"],
-                        cast(torch.Tensor, X_score_L),
-                        cast(torch.Tensor, score_mask_L),
+                        sample_diffusion_outs["X_L"], scoring.coords, scoring.mask
                     )
 
         # ... run non-batched confidence head

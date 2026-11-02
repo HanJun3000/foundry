@@ -23,6 +23,7 @@ from foundry.inference_engines.base import BaseInferenceEngine
 from foundry.metrics.metric import MetricManager
 from foundry.utils.ddp import RankedLogger
 from rf3.data.score_structure import (
+    ScoringCoordinates,
     ScoringSpec,
     build_score_coordinates,
     check_scoring_coverage,
@@ -621,8 +622,7 @@ class RF3InferenceEngine(BaseInferenceEngine):
             # from the input structure instead of from the diffusion samples
             scoring_spec = input_spec.score_structure
             is_scoring = scoring_spec is not None and scoring_spec.enabled
-            X_score_L = None
-            score_mask_L = None
+            score_coordinates = None
             scoring_info = None
             if is_scoring:
                 assert scoring_spec is not None  # narrowed by `is_scoring`
@@ -633,13 +633,14 @@ class RF3InferenceEngine(BaseInferenceEngine):
                         "evaluates the confidence head on the given coordinates; without "
                         "that head there is nothing to report."
                     )
-                X_score_L, score_mask_L = build_score_coordinates(pipeline_output)
+                score_coords, score_mask = build_score_coordinates(pipeline_output)
+                score_coordinates = ScoringCoordinates(score_coords, score_mask)
                 scoring_info = summarize_scoring(
                     example_id=input_spec.example_id,
                     atom_array=pipeline_output["atom_array"],
-                    score_mask_L=score_mask_L,
+                    score_mask_L=score_mask,
                     rep_atom_idxs=pipeline_output["ground_truth"]["rep_atom_idxs"],
-                    diffusion_skipped=bool(score_mask_L.all()),
+                    diffusion_skipped=score_coordinates.is_complete,
                     structure_path=input_spec.source_path,
                 )
                 log_scoring_summary(scoring_info)
@@ -674,12 +675,13 @@ class RF3InferenceEngine(BaseInferenceEngine):
                         should_early_stop_fn
                     )
                 if is_scoring:
-                    # (Moved with the example, so scoring runs on the model's device)
-                    validation_step_kwargs["X_score_L"] = self.trainer.fabric.to_device(
-                        X_score_L
-                    )
-                    validation_step_kwargs["score_mask_L"] = (
-                        self.trainer.fabric.to_device(score_mask_L)
+                    # (Moved with the example, so scoring runs on the model's device.
+                    # `ScoringCoordinates.to_device` rather than `fabric.to_device`:
+                    # Fabric's would also hand the tensors to the precision plugin,
+                    # which casts them to bfloat16 — see the class docstring.)
+                    assert score_coordinates is not None
+                    validation_step_kwargs["score_coordinates"] = (
+                        score_coordinates.to_device(self.trainer.fabric.device)
                     )
                 valid_step_outs = self.trainer.validation_step(
                     batch=pipeline_output,

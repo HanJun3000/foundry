@@ -544,6 +544,41 @@ RF3 was also trained to respect interface templates; that is, pairwise distances
 
 </details>
 
+<details>
+<summary><strong>Scoring a given structure (instead of predicting one)</strong></summary>
+
+`score_structure=true` runs RF3's normal trunk — sequence, MSA, templates — but evaluates the **confidence head on the coordinates you supply** instead of on the model's own diffusion samples. The output is pLDDT / PAE / PDE / pTM / ipTM *as if RF3 had predicted that structure*. Use it to ask "does RF3 believe this model?" of a crystal structure, a design, or another tool's prediction, and to compare confidences across structure predictors on a common set of complexes.
+
+```bash
+rf3 fold score_structure=true diffusion_batch_size=1 \
+  inputs=my_complex.cif out_dir=./scores
+```
+
+The outputs are the usual ones, plus `<name>_scoring_info.json` recording what was actually scored: the input path, per-chain residue and atom coverage, which representative atoms were missing, and whether the diffusion rollout was skipped. `<name>_summary_confidences.json` gains a `scoring` block with the same coverage numbers.
+
+**What reaches the confidence head.** In the released checkpoint (`use_Cb_distances: false`), the coordinates enter the confidence head through exactly one quantity: a pairwise distance matrix over the per-token **representative atoms** — CB for amino acids (CA for glycine), C4 for purines, C2 for pyrimidines, and every atom of a ligand. pLDDT and `exp_resolved` are projected from the single representation alone. Two consequences:
+
+- Scoring is **exactly invariant** to a global rotation or translation of the input. Your structure does not need to be aligned to anything.
+- A **missing side-chain atom cannot change the score**; a missing CB invalidates that one token. Experimental structures routinely lack a few (disordered loops, N-terminal residues), so RF3 warns and names them rather than refusing. Set `score_structure_min_rep_atom_coverage` (e.g. `0.95`) to make a campaign reject poorly covered inputs instead.
+
+**How missing atoms are handled.** If the input provides every model atom, the diffusion rollout is skipped entirely and scoring is cheaper than prediction. Otherwise the rollout runs, each sample is rigidly superposed onto the atoms you gave, and those atoms are then overwritten with yours — so the gaps are filled at physical bond lengths rather than left at the origin. Either way the atoms you supplied come back unchanged, and the output structure is written in the frame of the input file.
+
+> [!IMPORTANT]
+> The **sequence comes from the input file**, as in any other RF3 run; the file only supplies coordinates. Scoring a mutant therefore requires a file whose sequence is the sequence you mean. Supplying coordinates from a *separate* file for a sequence-based (JSON) input is not yet supported.
+
+Other things worth knowing:
+
+- `diffusion_batch_size=1` is recommended. Samples are identical when the input covers every atom, and differ only in the filled atoms otherwise.
+- Early stopping is disabled automatically (an early exit would return without confidences), and `dump_trajectories` is refused.
+- A JSON input can set `score_structure` per job, which overrides the command-line default:
+  ```json
+  {"name": "job1", "components": [...], "score_structure": {"min_representative_atom_coverage": 0.95}}
+  ```
+- **RF3 reports pLDDT on a 0-1 scale**, not 0-100. Normalise before comparing against other tools.
+- A checkpoint without a confidence head cannot score, and will fail with a clear error.
+
+</details>
+
 ## Chirality
 
 If inputs are given in a form that specifies chirality, the model will receive the corresponding features and attempt to preserve the chirality of the inputs.
@@ -597,6 +632,10 @@ If inputs are given in a form that specifies chirality, the model will receive t
 - **`template_selection`** *(optional)*: Selection syntax to provide token-level templates (for both polymers and non-polymers). Uses `AtomSelection` format. Similar to traditional homology-style templates, but also can be applied to small molecules (less rigidly adhered to than the `ground_truth_conformer_selection` approach). See <a>TODO: HREF TO TEMPLATING, SET ID</a> for more information.
 
 - **`cyclic_chains`** *(optional)*: List of strings of chain ids that should be cyclized. If given a cif, the model will automatically detect cyclization.
+
+- **`score_structure`** *(optional)*: Score the input structure instead of predicting one: the trunk runs as usual, but the confidence head is evaluated on the input's coordinates rather than on diffusion samples. See "Scoring a given structure" above for what this does and does not measure. Defaults to False.
+
+- **`score_structure_min_rep_atom_coverage`** *(optional)*: Refuse to score an input that provides less than this fraction of the token representative atoms (CB for amino acids, CA for glycine, C4/C2 for nucleotides, every ligand atom) — the only coordinates the confidence head reads. Defaults to `0.0`, which never refuses and only warns, naming the affected residues in the log and in `<name>_scoring_info.json`. Only used when `score_structure=true`.
 
 </details>
 

@@ -1,6 +1,6 @@
 import hydra
 import torch
-from beartype.typing import Any, cast
+from beartype.typing import TYPE_CHECKING, Any, cast
 from einops import repeat
 from jaxtyping import Float, Int
 from lightning_utilities import apply_to_collection
@@ -19,6 +19,9 @@ from foundry.trainers.fabric import FabricTrainer
 from foundry.training.EMA import EMA
 from foundry.utils.ddp import RankedLogger
 from foundry.utils.torch import assert_no_nans, assert_same_shape
+
+if TYPE_CHECKING:
+    from rf3.data.score_structure import ScoringCoordinates
 
 ranked_logger = RankedLogger(__name__, rank_zero_only=True)
 
@@ -498,8 +501,7 @@ class RF3TrainerWithConfidence(RF3Trainer):
         batch_idx: int,
         compute_metrics: bool = True,
         should_early_stop_fn: ShouldEarlyStopFn | None = None,
-        X_score_L: torch.Tensor | None = None,
-        score_mask_L: torch.Tensor | None = None,
+        score_coordinates: "ScoringCoordinates | None" = None,
     ) -> dict:
         """Validation step, running forward pass (with full rollout) and computing validation metrics, including confidence.
 
@@ -508,12 +510,10 @@ class RF3TrainerWithConfidence(RF3Trainer):
             batch_idx: The index of the current batch.
             compute_metrics: Whether to compute metrics.
             should_early_stop_fn: Early-stopping predicate; see `RF3WithConfidence.forward`.
-            X_score_L: Scoring mode. Atom-level coordinates [L, 3] of a given structure, in
-                the model's atom order, on which to evaluate the confidence head instead of
-                on the model's own diffusion samples. Mutually exclusive with
-                `should_early_stop_fn`.
-            score_mask_L: Boolean mask [L] marking which atoms `X_score_L` provides.
-                Required when `X_score_L` is given.
+            score_coordinates: Scoring mode. The coordinates of a given structure, in the
+                model's atom order, plus a mask of which atoms it provides, on which to
+                evaluate the confidence head instead of on the model's own diffusion
+                samples. Mutually exclusive with `should_early_stop_fn`.
 
         Returns:
             dict: Output dictionary containing the validation metrics and network output.
@@ -539,8 +539,7 @@ class RF3TrainerWithConfidence(RF3Trainer):
             ],  # Determine the number of recycles from the MSA stack shape
             coord_atom_lvl_to_be_noised=example["coord_atom_lvl_to_be_noised"],
             should_early_stop_fn=should_early_stop_fn,
-            X_score_L=X_score_L,
-            score_mask_L=score_mask_L,
+            score_coordinates=score_coordinates,
         )
 
         assert_no_nans(

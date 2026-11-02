@@ -171,6 +171,43 @@ class ScoringSpec:
         )
 
 
+class ScoringCoordinates:
+    """Carries the scoring coordinates and mask into the model at full precision.
+
+    Lightning's ``_FabricModule.forward`` runs ``precision.convert_input`` over its
+    arguments, which casts every floating tensor to bfloat16 under the inference
+    autocast. Rounding the given coordinates to bfloat16 displaces every atom by
+    ~0.1 Angstrom at typical radii, so the scored structure would no longer be the
+    structure that was handed in. ``apply_to_collection`` does not traverse a plain
+    object (it descends into tensors, mappings, sequences and dataclasses), so passing
+    them inside this holder preserves them exactly.
+
+    Args:
+        coords: Input coordinates in the model's atom order, ``[L, 3]``.
+        mask: Which atoms the input provides, ``[L]``.
+    """
+
+    # (Not a dataclass or NamedTuple on purpose: `apply_to_collection` traverses both.)
+    __slots__ = ("coords", "mask")
+
+    def __init__(
+        self,
+        coords: Float[torch.Tensor, "L 3"],
+        mask: Bool[torch.Tensor, " L"],
+    ) -> None:
+        self.coords = coords
+        self.mask = mask
+
+    @property
+    def is_complete(self) -> bool:
+        """Whether the input provides every model atom (so diffusion can be skipped)."""
+        return bool(self.mask.all())
+
+    def to_device(self, device: torch.device) -> "ScoringCoordinates":
+        """Move both tensors to ``device``, preserving their dtypes."""
+        return ScoringCoordinates(self.coords.to(device), self.mask.to(device))
+
+
 def record_input_presence(atom_array: AtomArray) -> AtomArray:
     """Annotate which atoms carry coordinates from the input file.
 
@@ -268,13 +305,19 @@ def overlay_score_coordinates(
     absent from the input keep their sampled positions, now expressed in the input
     structure's frame, so they sit at sensible bond lengths instead of at the origin.
 
+    The superposition runs with autocast disabled. ``weighted_rigid_align`` builds its
+    covariance matrix with ``torch.einsum``, which is autocast-eligible, so under the
+    bfloat16 autocast of the inference forward pass the alignment — and then the
+    assignment of the given coordinates into its bfloat16 result — would silently
+    quantize every atom by ~0.1 Angstrom at typical radii.
+
     Args:
         X_sample_DLC: Diffusion samples, ``[D, L, 3]``.
         X_score_LC: Input coordinates in the model's atom order, ``[L, 3]``.
         score_mask_L: Which atoms the input provides, ``[L]``.
 
     Returns:
-        The overlaid coordinates, ``[D, L, 3]``, in ``X_sample_DLC``'s dtype.
+        The overlaid coordinates, ``[D, L, 3]``, in ``X_score_LC``'s dtype.
 
     Raises:
         ValueError: On a shape mismatch, or when fewer than
@@ -304,7 +347,11 @@ def overlay_score_coordinates(
             f"diffusion samples onto the input structure, got {n_given}."
         )
 
-    out_dtype = X_sample_DLC.dtype
+    # Return in the *given* structure's dtype, not the sample's. The diffusion rollout
+    # runs under bfloat16 autocast, whose ~3 significant digits would quantize the input
+    # coordinates by ~0.1 A at typical radii — the scored structure must come back
+    # exactly as it went in.
+    out_dtype = X_score_LC.dtype
     target = (
         X_score_LC.to(device=X_sample_DLC.device, dtype=torch.float64)
         .unsqueeze(0)
@@ -312,13 +359,16 @@ def overlay_score_coordinates(
     )
     # `weighted_rigid_align` moves its `X_gt_L` argument onto `X_L`, so the sample is
     # the moving body and the given atoms are the fixed one.
-    aligned = weighted_rigid_align(
-        X_L=target,
-        X_gt_L=X_sample_DLC.to(torch.float64),
-        X_exists_L=mask,
-    )
+    with torch.autocast(device_type=X_sample_DLC.device.type, enabled=False):
+        aligned = weighted_rigid_align(
+            X_L=target,
+            X_gt_L=X_sample_DLC.to(torch.float64),
+            X_exists_L=mask,
+        )
 
-    overlaid = aligned.clone()
+    # Cast before the assignment, not after: writing float64 coordinates into a
+    # reduced-precision tensor would round them on the way in.
+    overlaid = aligned.to(torch.float64)
     overlaid[:, mask] = target[:, mask]
     return overlaid.to(out_dtype)
 

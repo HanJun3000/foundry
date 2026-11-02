@@ -33,6 +33,7 @@ import torch
 from biotite.structure import AtomArray
 from rf3.data.score_structure import (
     PRESENCE_ANNOTATION,
+    ScoringCoordinates,
     ScoringSpec,
     build_score_coordinates,
     check_scoring_coverage,
@@ -152,11 +153,26 @@ def test_overlay_never_leaves_a_filled_atom_on_the_sentinel_or_the_origin():
     assert not (filled.abs() < 1e-6).all(dim=-1).any()
 
 
-def test_overlay_preserves_the_sample_dtype():
+def test_overlay_returns_the_dtype_of_the_given_structure():
     truth = torch.randn(20, 3)
     sample = truth.unsqueeze(0).to(torch.float32)
     out = overlay_score_coordinates(sample, truth, torch.ones(20, dtype=torch.bool))
     assert out.dtype == torch.float32
+
+
+def test_overlay_does_not_quantize_the_given_atoms_to_the_sample_precision():
+    # The diffusion rollout runs under bfloat16 autocast. Returning the sample's dtype
+    # would round the input coordinates to ~3 significant digits, moving every given
+    # atom by ~0.1 A at typical radii — the scored structure would not be the input.
+    truth = torch.randn(40, 3, generator=torch.Generator().manual_seed(21)) * 30
+    mask = torch.ones(40, dtype=torch.bool)
+    mask[:6] = False
+    sample = _rigidly_moved(truth, seed=22).unsqueeze(0).to(torch.bfloat16)
+
+    out = overlay_score_coordinates(sample, truth, mask)
+
+    assert out.dtype == torch.float32
+    assert torch.equal(out[0, mask], truth[mask])
 
 
 @pytest.mark.parametrize(
@@ -458,8 +474,7 @@ def _forward_with_stubs(
     n_atom=24,
     n_token=8,
     n_sample=2,
-    X_score_L=None,
-    score_mask_L=None,
+    score_coordinates=None,
     sample_coords=None,
 ):
     """Call the real ``RF3WithConfidence.forward`` with every heavy part stubbed out."""
@@ -502,8 +517,7 @@ def _forward_with_stubs(
         input=network_input,
         n_cycle=1,
         coord_atom_lvl_to_be_noised=torch.zeros(n_sample, n_atom, 3),
-        X_score_L=X_score_L,
-        score_mask_L=score_mask_L,
+        score_coordinates=score_coordinates,
     )
     return out, sampler, head
 
@@ -521,7 +535,7 @@ def test_forward_without_scoring_runs_diffusion_and_scores_the_sample():
 def test_forward_skips_diffusion_when_the_input_covers_every_atom():
     given = torch.randn(24, 3, generator=torch.Generator().manual_seed(12))
     out, sampler, head = _forward_with_stubs(
-        X_score_L=given, score_mask_L=torch.ones(24, dtype=torch.bool)
+        score_coordinates=ScoringCoordinates(given, torch.ones(24, dtype=torch.bool))
     )
 
     assert sampler.n_calls == 0, "diffusion must be skipped at full coverage"
@@ -540,7 +554,8 @@ def test_forward_overlays_when_the_input_is_missing_atoms():
     sample_coords = _rigidly_moved(given, seed=17).unsqueeze(0).repeat(2, 1, 1)
 
     out, sampler, head = _forward_with_stubs(
-        X_score_L=given, score_mask_L=mask, sample_coords=sample_coords
+        score_coordinates=ScoringCoordinates(given, mask),
+        sample_coords=sample_coords,
     )
 
     assert sampler.n_calls == 1, "diffusion must run to fill the missing atoms"
@@ -557,16 +572,38 @@ def test_forward_returns_the_scored_coordinates_as_the_rollout_output():
     # output writer and the clash metric then consume; pin that it is the scored tensor.
     given = torch.randn(24, 3, generator=torch.Generator().manual_seed(14))
     out, _, _ = _forward_with_stubs(
-        X_score_L=given, score_mask_L=torch.ones(24, dtype=torch.bool)
+        score_coordinates=ScoringCoordinates(given, torch.ones(24, dtype=torch.bool))
     )
     assert out["X_pred_rollout_L"].shape == (2, 24, 3)
     assert out["early_stopped"] is False
     assert out["X_L"] is None  # unchanged contract: the trainer does the remap
 
 
-def test_forward_rejects_scoring_without_a_mask():
-    with pytest.raises(AssertionError, match="score_mask_L"):
-        _forward_with_stubs(X_score_L=torch.randn(24, 3))
+def test_scoring_coordinates_reports_completeness():
+    coords = torch.randn(5, 3)
+    assert ScoringCoordinates(coords, torch.ones(5, dtype=torch.bool)).is_complete
+    mask = torch.ones(5, dtype=torch.bool)
+    mask[2] = False
+    assert not ScoringCoordinates(coords, mask).is_complete
+
+
+def test_scoring_coordinates_is_not_traversed_by_precision_conversion():
+    # Lightning's `_FabricModule.forward` runs `precision.convert_input` over its
+    # arguments, which casts every floating tensor to bfloat16 under the inference
+    # autocast. That would displace every given atom by ~0.1 A, so the holder must be
+    # opaque to `apply_to_collection`.
+    from lightning.fabric.plugins.precision.utils import _convert_fp_tensor
+    from lightning_utilities import apply_to_collection
+
+    holder = ScoringCoordinates(torch.randn(4, 3), torch.ones(4, dtype=torch.bool))
+    args = ((holder,), {"bare": torch.randn(4, 3)})
+    converted = apply_to_collection(
+        args, function=_convert_fp_tensor, dtype=torch.Tensor, dst_type=torch.bfloat16
+    )
+
+    assert converted[1]["bare"].dtype == torch.bfloat16, "sanity: bare tensors convert"
+    assert converted[0][0] is holder
+    assert converted[0][0].coords.dtype == torch.float32
 
 
 def test_forward_rejects_scoring_together_with_early_stopping():
@@ -580,8 +617,9 @@ def test_forward_rejects_scoring_together_with_early_stopping():
             input={"f": {}, "t": torch.zeros(1)},
             n_cycle=1,
             should_early_stop_fn=lambda **kwargs: (False, {}),
-            X_score_L=torch.randn(4, 3),
-            score_mask_L=torch.ones(4, dtype=torch.bool),
+            score_coordinates=ScoringCoordinates(
+                torch.randn(4, 3), torch.ones(4, dtype=torch.bool)
+            ),
         )
 
 
@@ -595,8 +633,9 @@ def test_forward_rejects_scoring_in_training_mode():
             model,
             input={"f": {}, "t": torch.zeros(1)},
             n_cycle=1,
-            X_score_L=torch.randn(4, 3),
-            score_mask_L=torch.ones(4, dtype=torch.bool),
+            score_coordinates=ScoringCoordinates(
+                torch.randn(4, 3), torch.ones(4, dtype=torch.bool)
+            ),
         )
 
 
