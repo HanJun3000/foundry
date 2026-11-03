@@ -218,3 +218,149 @@ def test_the_annotation_is_the_only_difference_in_the_atom_array(pipeline):
     )
     assert extra == {PRESENCE_ANNOTATION}
     assert np.array_equal(with_scoring["atom_array"].coord, without["atom_array"].coord)
+
+
+# --- non-polymer entities (ligands, ions, non-canonical residues) -----------
+#
+# `1cyo.cif` carries a HEM ligand, which the pipeline atomizes: every heavy atom
+# becomes its own token, and therefore its own token representative atom. Scoring
+# accounting for non-polymer entities is strictly per-atom, with none of the
+# "a missing side chain cannot change the score" slack that polymers get.
+
+
+def _hem_atom_indices(atom_array) -> np.ndarray:
+    return np.where(np.asarray(atom_array.res_name) == "HEM")[0]
+
+
+def test_every_ligand_atom_is_its_own_representative_atom(scored_example):
+    atom_array = scored_example["atom_array"]
+    hem_idxs = _hem_atom_indices(atom_array)
+    assert hem_idxs.size > 0, "1cyo.cif should contain a HEM ligand"
+
+    rep_idxs = scored_example["ground_truth"]["rep_atom_idxs"].numpy()
+    # Every HEM atom is a representative atom ...
+    assert set(hem_idxs.tolist()) <= set(rep_idxs.tolist())
+    # ... and contributes its own token, unlike an amino acid's 1-per-residue.
+    assert np.isin(rep_idxs, hem_idxs).sum() == hem_idxs.size
+
+
+def test_a_fully_resolved_ligand_is_reported_as_complete(scored_example):
+    """The HEM of `1cyo.cif` is fully resolved, so its chain must show 100% coverage."""
+    coords, mask = build_score_coordinates(scored_example)
+    info = summarize_scoring(
+        example_id="1cyo",
+        atom_array=scored_example["atom_array"],
+        score_mask_L=mask,
+        rep_atom_idxs=scored_example["ground_truth"]["rep_atom_idxs"],
+        diffusion_skipped=False,
+    )
+    hem_chain = str(
+        np.asarray(scored_example["atom_array"].chain_iid)[
+            _hem_atom_indices(scored_example["atom_array"])
+        ][0]
+    )
+    chain = info["chains"][hem_chain]
+    assert chain["atoms"]["coverage"] == 1.0
+    assert chain["representative_atoms"]["coverage"] == 1.0
+    # Atom count == representative-atom count: one token per atom.
+    assert chain["atoms"]["n_total"] == chain["representative_atoms"]["n_total"]
+    assert chain["n_residues"] == 1
+
+
+def test_a_partially_resolved_ligand_has_its_missing_atoms_named(pipeline, tmp_path):
+    """Deleting ligand atoms must be reported, not papered over by the CCD template.
+
+    `add_missing_atoms` re-adds them from the CCD with NaN coordinates, which the
+    presence annotation records as absent. Were they instead filled from the reference
+    conformer, scoring would silently pin the ligand to ideal geometry.
+    """
+    dropped = {"CMA", "CMB", "CMC", "CMD", "CHA", "CHB"}
+    source = (TEST_DATA_DIR / "1cyo.cif").read_text().splitlines(keepends=True)
+    kept = [
+        line
+        for line in source
+        if not (
+            line.startswith("HETATM")
+            and len(line.split()) > 6
+            and line.split()[5] == "HEM"
+            and line.split()[3] in dropped
+        )
+    ]
+    stripped = tmp_path / "1cyo_hem_stripped.cif"
+    stripped.write_text("".join(kept))
+
+    with rng_state(create_rng_state_from_seeds(1, 1, 1)):
+        example = pipeline(
+            InferenceInput.from_cif_path(
+                stripped, score_structure=ScoringSpec(enabled=True)
+            ).to_pipeline_input()
+        )
+
+    _, mask = build_score_coordinates(example)
+    info = summarize_scoring(
+        example_id="1cyo_hem_stripped",
+        atom_array=example["atom_array"],
+        score_mask_L=mask,
+        rep_atom_idxs=example["ground_truth"]["rep_atom_idxs"],
+        diffusion_skipped=False,
+    )
+    hem_chain = str(
+        np.asarray(example["atom_array"].chain_iid)[
+            _hem_atom_indices(example["atom_array"])
+        ][0]
+    )
+    chain = info["chains"][hem_chain]
+    # Each deleted atom costs one token, since every ligand atom is representative.
+    assert chain["atoms"]["n_given"] == chain["atoms"]["n_total"] - len(dropped)
+    assert chain["representative_atoms"]["n_given"] == (
+        chain["representative_atoms"]["n_total"] - len(dropped)
+    )
+    assert chain["n_residues_complete"] == 0
+
+    named = {
+        entry["atom_name"]
+        for entry in info["missing_representative_atoms"]
+        if entry["chain"] == hem_chain
+    }
+    assert named == dropped
+
+
+# --- a sequence/CCD input has nothing to score ------------------------------
+
+
+def test_a_cif_input_reports_that_it_carries_coordinates():
+    assert (
+        InferenceInput.from_cif_path(
+            TEST_DATA_DIR / "1cyo.cif", score_structure=ScoringSpec(enabled=True)
+        ).has_input_coordinates
+        is True
+    )
+
+
+def test_a_sequence_and_ccd_input_reports_that_it_carries_no_coordinates():
+    """Guards the engine's refusal to score a JSON input.
+
+    A CCD component is built with reference-conformer coordinates, which are *not*
+    NaN, so the presence annotation marks them as given. They are ideal geometry, not
+    an observed structure: scoring them would report a confidence for a ligand pose
+    the user never supplied, and would pin that pose through the overlay. The engine
+    therefore refuses an input whose coordinates did not come from the user, and this
+    flag is the signal it uses.
+    """
+    inference_input = InferenceInput.from_json_dict(
+        {
+            "name": "ligand_only",
+            "components": [
+                {"seq": "SKAVKYYTLEEIQKHNNSK", "chain_id": "A"},
+                {"ccd_code": "HEM"},
+            ],
+        },
+        score_structure=ScoringSpec(enabled=True),
+    )
+    assert inference_input.has_input_coordinates is False
+    # The reference conformer really is non-NaN, which is why the flag is needed.
+    hem = inference_input.atom_array[
+        np.asarray(inference_input.atom_array.res_name) == "HEM"
+    ]
+    assert hem.array_length() > 0
+    assert not np.isnan(hem.coord).all()

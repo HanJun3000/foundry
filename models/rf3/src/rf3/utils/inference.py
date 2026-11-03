@@ -75,6 +75,13 @@ class InferenceInput:
     # Where the input came from, when it came from a file. Reported in scoring mode so
     # `<example_id>_scoring_info.json` records which structure was scored.
     source_path: str | None = None
+    # Whether this input carries coordinates the *user* supplied, as opposed to an atom
+    # array built from sequence and CCD templates. Scoring requires the former: a
+    # CCD reference conformer has non-NaN coordinates but is not an observed structure,
+    # so without this flag a sequence/CCD input would be silently scored against its own
+    # ideal conformers. Set by `from_cif_path` and `from_atom_array`; left False by
+    # `from_json_dict`.
+    has_input_coordinates: bool = False
 
     @classmethod
     def from_cif_path(
@@ -152,6 +159,7 @@ class InferenceInput:
             ground_truth_conformer_selection=final_conformer_sel,
             score_structure=score_structure,
             source_path=str(path),
+            has_input_coordinates=True,
         )
 
     @classmethod
@@ -299,6 +307,7 @@ class InferenceInput:
             template_selection=template_selection,
             ground_truth_conformer_selection=ground_truth_conformer_selection,
             score_structure=score_structure,
+            has_input_coordinates=True,
         )
 
     def to_pipeline_input(self) -> dict:

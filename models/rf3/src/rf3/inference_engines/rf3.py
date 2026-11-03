@@ -626,6 +626,17 @@ class RF3InferenceEngine(BaseInferenceEngine):
             scoring_info = None
             if is_scoring:
                 assert scoring_spec is not None  # narrowed by `is_scoring`
+                if not input_spec.has_input_coordinates:
+                    raise ValueError(
+                        f"`score_structure` needs a structure to score, but example "
+                        f"'{input_spec.example_id}' was built from sequence and CCD "
+                        "templates (a JSON/dictionary input) and carries no input "
+                        "coordinates. Note that CCD components do come with reference "
+                        "conformer coordinates, which are ideal geometry rather than an "
+                        "observed structure and must not be scored. Pass the structure "
+                        "itself as a CIF/PDB input instead; supplying coordinates from a "
+                        "separate file for a sequence-based input is not yet supported."
+                    )
                 if "confidence_feats" not in pipeline_output:
                     raise ValueError(
                         "`score_structure` requires a checkpoint with a confidence head, "

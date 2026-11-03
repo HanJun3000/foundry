@@ -408,6 +408,32 @@ def test_scoring_refuses_an_input_below_the_coverage_threshold(require_ckpt, tmp
     assert "representative atom" in result.stdout + result.stderr
 
 
+def test_scoring_refuses_a_sequence_and_ccd_input(require_ckpt, tmp_path):
+    """A JSON input has no coordinates to score.
+
+    Its CCD components do carry reference-conformer coordinates, which are ideal
+    geometry rather than an observed structure; scoring them would report a confidence
+    for a ligand pose nobody supplied. The engine must refuse rather than oblige.
+    """
+    result = subprocess.run(
+        [str(_RF3_BIN), "fold"]
+        + SPEED_FLAGS
+        + [
+            f"ckpt_path={CKPT_PATH}",
+            f"inputs={DATA_DIR / '1cyo_with_ligand.json'}",
+            f"out_dir={tmp_path}",
+            "score_structure=true",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=1800,
+    )
+    assert result.returncode != 0
+    output = result.stdout + result.stderr
+    assert "no input coordinates" in output
+    assert "reference conformer" in output
+
+
 def test_the_normal_prediction_path_writes_no_scoring_files(basic_folds_dir):
     # Reuses the plain-fold fixture: scoring must be fully opt-in.
     for example_id in (EXAMPLE, f"{EXAMPLE}_from_json"):

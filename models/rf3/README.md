@@ -563,8 +563,10 @@ The outputs are the usual ones, plus `<name>_scoring_info.json` recording what w
 
 **How missing atoms are handled.** If the input provides every model atom, the diffusion rollout is skipped entirely and scoring is cheaper than prediction. Otherwise the rollout runs, each sample is rigidly superposed onto the atoms you gave, and those atoms are then overwritten with yours — so the gaps are filled at physical bond lengths rather than left at the origin. Either way the atoms you supplied come back unchanged, and the output structure is written in the frame of the input file.
 
+**Ligands, ions, glycans and non-canonical residues.** These are *atomized*: every heavy atom becomes its own token, and therefore its own representative atom. Coverage accounting for them is strictly per-atom, with none of the slack polymers get — a HEM with six atoms missing loses six tokens, and each one is named in the warning and in `<name>_scoring_info.json`. Nothing extra is needed to score a structure containing them: pass the CIF/PDB and each non-polymer entity appears as its own chain in the per-chain breakdown. The corollary is that a partially modelled ligand degrades the score far more than a partially modelled side chain, so check the per-chain representative-atom coverage before trusting an interface confidence.
+
 > [!IMPORTANT]
-> The **sequence comes from the input file**, as in any other RF3 run; the file only supplies coordinates. Scoring a mutant therefore requires a file whose sequence is the sequence you mean. Supplying coordinates from a *separate* file for a sequence-based (JSON) input is not yet supported.
+> The **sequence comes from the input file**, as in any other RF3 run; the file only supplies coordinates. Scoring a mutant therefore requires a file whose sequence is the sequence you mean. Supplying coordinates from a *separate* file for a sequence-based (JSON) input is not yet supported, and **scoring a JSON input is refused**: it has no coordinates, and the reference-conformer coordinates its CCD components carry are ideal geometry rather than an observed structure.
 
 Other things worth knowing:
 
